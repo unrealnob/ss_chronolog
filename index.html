@@ -251,6 +251,14 @@
     background: var(--navy); color: #fff; text-align: left;
     font-size: 12px; font-weight: 700; letter-spacing: 0.08em; padding: 17px 16px;
   }
+  .actions-head-inner { display: flex; align-items: center; justify-content: center; gap: 10px; white-space: nowrap; }
+  .sort-select {
+    height: 30px; max-width: 128px; padding: 0 8px; border: 1px solid rgba(255,255,255,0.35); border-radius: 8px;
+    background: rgba(255,255,255,0.12); color: #fff; font: inherit; font-size: 12px; font-weight: 600;
+    letter-spacing: 0; cursor: pointer;
+  }
+  .sort-select option { color: #0f1b33; background: #fff; }
+  .sort-select:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
   thead th:first-child { border-radius: 14px 0 0 14px; }
   thead th:last-child { border-radius: 0 14px 14px 0; text-align: center; }
   tbody td { background: var(--row); padding: 0 16px; height: 51px; font-size: 15px; }
@@ -1135,7 +1143,19 @@
             <thead>
               <tr>
                 <th>#</th><th>STUDENT ID</th><th>NAME</th><th>STATUS</th>
-                <th>TIME IN</th><th>TIME OUT</th><th>REMARKS</th><th>ACTIONS</th>
+                <th>TIME IN</th><th>TIME OUT</th><th>REMARKS</th>
+                <th class="actions-head">
+                  <div class="actions-head-inner">
+                    <span>ACTIONS</span>
+                    <select id="attendance-sort" class="sort-select" aria-label="Sort attendance table" title="Sort by">
+                      <option value="default">Sort by…</option>
+                      <option value="lastName">Last Name</option>
+                      <option value="studentId">Student ID</option>
+                      <option value="timeIn">Time of Entry</option>
+                      <option value="timeOut">Time of Exit</option>
+                    </select>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody id="rows"></tbody>
@@ -2165,6 +2185,72 @@
     subjectNameInput.focus();
   }
 
+  let attendanceSort = 'default';
+
+  function lastNameOf(student) {
+    const name = String(student.name || '').trim();
+    if (!name) return '';
+    if (name.includes(',')) return name.split(',')[0].trim();
+    const parts = name.split(/\s+/);
+    const suffixes = ['jr', 'sr', 'ii', 'iii', 'iv', 'v'];
+    while (parts.length > 1 && suffixes.includes(parts[parts.length - 1].toLowerCase().replace(/[^a-z]/g, ''))) {
+      parts.pop();
+    }
+    return parts[parts.length - 1];
+  }
+
+  function recordClock(record, text, useInAt) {
+    if (!record || !text) return null;
+    if (useInAt) {
+      const exact = recordInTime(record);
+      if (exact) return exact.getTime();
+    }
+    const clock = /^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([ap])?/i.exec(text);
+    if (!clock) return null;
+    let hour = Number(clock[1]);
+    const meridiem = clock[4] ? clock[4].toLowerCase() : '';
+    if (meridiem === 'p' && hour < 12) hour += 12;
+    if (meridiem === 'a' && hour === 12) hour = 0;
+    return ((hour * 60 + Number(clock[2])) * 60 + Number(clock[3] || 0)) * 1000;
+  }
+
+  function sortedStudents() {
+    const list = students.slice();
+    if (attendanceSort === 'default') return list;
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+    const byLast = (a, b) => {
+      const la = lastNameOf(a), lb = lastNameOf(b);
+      if (!la !== !lb) return la ? -1 : 1;            // students without a name go last
+      return collator.compare(la, lb) ||
+        collator.compare(String(a.name || ''), String(b.name || '')) ||
+        collator.compare(a.id, b.id);
+    };
+    const byId = (a, b) => collator.compare(a.id, b.id);
+    const byTime = field => {
+      const stamp = student => {
+        const record = getAttendanceRecord(student);
+        if (!record) return null;
+        return field === 'timeIn'
+          ? recordClock(record, record.timeIn, true)
+          : recordClock(record, record.timeOut, false);
+      };
+      return (a, b) => {
+        const ta = stamp(a), tb = stamp(b);
+        if (ta === null && tb === null) return byLast(a, b);
+        if (ta === null) return 1;                    // no time recorded: bottom of the list
+        if (tb === null) return -1;
+        return ta - tb || byLast(a, b);
+      };
+    };
+    const comparators = {
+      lastName: byLast,
+      studentId: byId,
+      timeIn: byTime('timeIn'),
+      timeOut: byTime('timeOut')
+    };
+    return list.sort(comparators[attendanceSort] || (() => 0));
+  }
+
   function updateAttendance() {
     const records = students.map(student => getAttendanceRecord(student));
     const present = records.filter(record => record && record.status === 'present').length;
@@ -2191,7 +2277,7 @@
       return;
     }
 
-    students.forEach((student, index) => {
+    sortedStudents().forEach((student, index) => {
       const record = getAttendanceRecord(student);
       const status = record ? record.status : 'pending';
       const tr = document.createElement('tr');
@@ -2638,7 +2724,7 @@
     const subject = currentSubject();
     const date = localDayKey();
     const headers = ['Subject', 'Date', 'Student ID', 'Name', 'Status', 'Time In', 'Time Out', 'Remarks'];
-    const rows = students.map(student => {
+    const rows = sortedStudents().map(student => {
       const record = getAttendanceRecord(student, activeSubjectId, date);
       const status = record ? record.status : 'pending';
       const statusLabel = status === 'pending'
@@ -3002,6 +3088,11 @@
       usbScanInput.focus();
     }
   }
+
+  document.getElementById('attendance-sort').addEventListener('change', event => {
+    attendanceSort = event.target.value;
+    updateAttendance();
+  });
 
   const savedSubjects = loadSubjects();
   subjects = savedSubjects.items;
