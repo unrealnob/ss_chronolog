@@ -1,0 +1,3325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chronolog</title>
+<style>
+  :root {
+    --navy: #26365f;
+    --blue: #2563d6;
+    --green: #1fa36a;
+    --red: #e0443e;
+    --amber: #f2a117;
+    --violet: #6f6bd8;
+    --ink: #1d2740;
+    --muted: #7b869c;
+    --glass: #fff;
+    --card: rgba(255, 255, 255, 0.92);
+    --row: rgba(232, 240, 252, 0.85);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    overflow: hidden;
+  }
+
+  .bg {
+    position: fixed; inset: 0; z-index: -1;
+    background:
+      url("assets/bg.png") center / cover no-repeat,
+      linear-gradient(180deg, #1f6fd6 0%, #4f9cf0 45%, #cfe4fb 78%, #f4f8fd 100%);
+  }
+
+  .view { position: fixed; inset: 0; display: none; }
+  .view.active { display: block; }
+
+  .brand {
+    position: absolute; top: calc(50% - 10.2vh); left: 50%;
+    transform: translate(-50%, -62%);
+    text-align: center; width: 100%;
+  }
+
+  #base { display: inline-block; width: 0; height: 0; }
+
+  .brand h1 {
+    font-size: 14.2vw;
+    font-weight: 700;
+    letter-spacing: -0.11em;
+    -webkit-text-stroke: 0.07vw #fff;
+    line-height: 0.8;
+    color: #fff;
+    width: fit-content; margin: 0 auto;
+    transition: color 0.3s ease, -webkit-text-stroke-color 0.3s ease, text-shadow 0.3s ease;
+    text-shadow:
+      0.10vw 0.10vw 0 #b4c2da,
+      0.20vw 0.20vw 0 #bac7de,
+      0.30vw 0.30vw 0 #c0cce1,
+      0.40vw 0.40vw 0 #c7d2e5,
+      0.50vw 0.50vw 0 #cdd7e8,
+      0.60vw 0.60vw 0 #d3dcec,
+      1vw 1.4vw 1.8vw rgba(25, 55, 105, 0.32);
+  }
+
+  .brand h1:hover {
+    color: #fb8c4c;
+    -webkit-text-stroke-color: #fb8c4c;
+    text-shadow:
+      0.10vw 0.10vw 0 #dc7a42,
+      0.20vw 0.20vw 0 #df7c43,
+      0.30vw 0.30vw 0 #e27e44,
+      0.40vw 0.40vw 0 #e48046,
+      0.50vw 0.50vw 0 #e78247,
+      0.60vw 0.60vw 0 #ea8448,
+      1vw 1.4vw 1.8vw rgba(25, 55, 105, 0.32);
+  }
+  .brand p {
+    position: absolute; top: 0; left: 0; margin: 0;
+    transform: translateX(-100%); white-space: nowrap;
+    font-size: max(10px, 2vw);
+    font-weight: 400;
+    letter-spacing: -0.09em;
+    color: #fff;
+    text-shadow: 0 2px 10px rgba(10, 30, 70, 0.8), 0 1px 3px rgba(10, 30, 70, 0.75);
+  }
+
+  .nav {
+    display: flex; gap: 22px; align-items: center;
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 6px 22px rgba(20, 50, 100, 0.22);
+  }
+  .nav button {
+    width: 34px; height: 34px; border: 0; background: none;
+    display: grid; place-items: center; cursor: pointer; border-radius: 10px;
+    color: var(--ink); position: relative;
+  }
+  .nav button:hover { background: rgba(251, 140, 76, 0.12); z-index: 5; }
+  .nav button:focus-visible { outline: 2px solid #fb8c4c; outline-offset: 2px; }
+  .nav button.current { background: rgba(251, 140, 76, 0.16); color: #fb8c4c; }
+  .nav svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  .nav.dock {
+    position: absolute; bottom: 27.4vh; left: 0; right: 0; margin: 0 auto; width: max-content;
+    gap: max(14px, 1.56vw); padding: max(5px, 0.47vw) max(18px, 1.95vw); border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+  }
+  .nav.dock button { width: max(30px, 2.9vw); height: max(30px, 2.9vw); }
+  .nav.dock svg { width: max(18px, 1.75vw); height: max(18px, 1.75vw); }
+  .nav.dock button.current { background: none; color: var(--ink); }
+
+  .rail { position: fixed; left: 40px; top: 40px; width: 78px; height: 78px; z-index: 30; }
+  .rail-logo-btn {
+    position: relative; z-index: 2;
+    width: 78px; height: 78px; border: 0; border-radius: 50%;
+    background: #fb8c4c; padding: 3px; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(20, 50, 100, 0.3);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .rail-logo-btn img { display: block; width: 100%; height: 100%; object-fit: contain; padding: 13px; }
+
+  .rail-logo-btn:hover, .rail:hover .rail-logo-btn {
+    transform: scale(1.12);
+    box-shadow: 0 6px 18px rgba(20, 50, 100, 0.3), 0 0 14px 4px rgba(251, 140, 76, 0.85), 0 0 34px 10px rgba(251, 140, 76, 0.5);
+  }
+  .rail { transition: opacity 0.3s ease, visibility 0s; }
+  .rail.hidden { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.3s ease, visibility 0s 0.3s; }
+  .rail-logo-btn:focus-visible { outline: 2px solid #fb8c4c; outline-offset: 3px; }
+  .rail-menu {
+    display: none; position: absolute; top: 44px; left: 1px; z-index: 1;
+    flex-direction: column; gap: 18px; width: 76px;
+    padding: 46px 0 20px; border-radius: 0 0 38px 38px;
+  }
+  .rail:hover .rail-menu, .rail.open .rail-menu { display: flex; }
+
+  .att {
+    height: 100%; padding: 40px 40px 28px;
+    display: grid; grid-template-columns: 76px 1fr; gap: 44px;
+  }
+  .att-side { padding-top: 0; }
+  .att-main {
+    display: grid; grid-template-columns: minmax(250px, 18vw) 1fr;
+    grid-template-rows: auto 1fr; gap: 24px; min-height: 0;
+  }
+  .glass {
+    background: var(--glass);
+    border-radius: 26px;
+    box-shadow: 0 8px 30px rgba(20, 50, 100, 0.12);
+  }
+
+  .top {
+    grid-column: 1 / -1;
+    display: grid; grid-template-columns: auto minmax(260px, 1.1fr) auto auto;
+    gap: 20px; align-items: center; padding: 22px 28px 26px;
+  }
+  .top h2 { font-size: 34px; font-weight: 700; letter-spacing: -0.01em; }
+  .top .date { margin-top: 8px; color: var(--muted); font-size: 15px; letter-spacing: 0.03em; }
+  .session {
+    background: #e3f6ec; border: 1.5px solid #8dd5b0; border-radius: 14px;
+    padding: 14px 22px; min-width: 190px;
+  }
+  .session.is-upcoming { background: #eef3fb; border-color: #ccd7e8; }
+  .session.is-ended { background: #fde8e7; border-color: #f0a9a6; }
+  .session.is-upcoming .dot { background: var(--navy); }
+  .session.is-ended .dot { background: var(--red); }
+  .session .lbl { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 700; color: var(--green); letter-spacing: 0.08em; }
+  .session .lbl > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+  .session.is-upcoming .lbl, .session.is-upcoming .time { color: var(--navy); }
+  .session.is-ended .lbl, .session.is-ended .time { color: var(--red); }
+  .dot { width: 16px; height: 16px; border-radius: 50%; background: var(--green); }
+  .session .time { margin: 4px 0 0 26px; font-size: 28px; font-weight: 700; color: var(--green); font-variant-numeric: tabular-nums; }
+  .session-next { margin: 6px 0 0 26px; color: var(--muted); font-size: 12px; line-height: 1.35; }
+  .btn {
+    border: 0; border-radius: 14px; font: inherit; font-weight: 700; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 0 28px; height: 54px; color: #fff;
+  }
+  .btn:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+  .btn.start { background: rgba(37, 99, 214, 0.28); color: #fff; width: 100%; }
+  .btn.end { background: var(--red); }
+  .btn.add { background: var(--blue); }
+  .btn.danger { background: var(--red); }
+  .btn.excel { background: var(--green); }
+  .btn.print { background: #fff; color: var(--ink); border: 1px solid #dfe6f2; }
+  .btn.wide { width: 100%; height: 48px; border-radius: 12px; }
+  .start-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .start-wrap .btn { min-width: 270px; }
+  .start-wrap small { color: var(--muted); font-size: 12px; }
+  .session-actions { display: flex; align-items: center; gap: 10px; }
+  .session-actions .btn { padding: 0 18px; }
+
+  .subjects { padding: 24px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow: auto; }
+  .subjects > * { flex-shrink: 0; }
+  .subjects h3 { font-size: 20px; font-weight: 700; margin-left: 4px; }
+  .subject-card-row { position: relative; }
+  #subject-list { display: grid; gap: 10px; }
+  .subject-card {
+    width: 100%; text-align: left; color: var(--ink); font: inherit; cursor: pointer;
+    background: var(--card); border: 1.5px solid transparent; border-radius: 18px;
+    padding: 14px 86px 14px 16px; display: grid; gap: 6px;
+  }
+  .subject-card:hover { border-color: #a9c5f6; }
+  .subject-card.active { border-color: var(--blue); box-shadow: inset 5px 0 0 var(--blue); }
+  .subject-card strong { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .subject-card small { color: var(--muted); font-size: 11px; }
+  .subject-day-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .subject-day-chip {
+    padding: 3px 6px; border-radius: 999px; background: #eef3fb;
+    color: var(--navy); font-size: 10px; font-weight: 700;
+  }
+  .badge-live {
+    position: absolute; top: 14px; right: 48px; background: var(--green); color: #fff;
+    font-size: 12px; font-weight: 700; padding: 8px 18px; border-radius: 999px;
+  }
+  .subject-edit {
+    position: absolute; top: 12px; right: 10px; width: 32px; height: 32px;
+    border: 0; border-radius: 9px; color: var(--blue); background: transparent;
+    font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .subject-edit:hover { background: rgba(37, 99, 214, 0.1); }
+  .subject-empty, .schedule-link, .hint { color: var(--muted); font-size: 12px; line-height: 1.4; }
+  .subject-empty { padding: 8px 4px; }
+  .schedule-link { margin-top: 2px; color: var(--ink); }
+  .schedule-details { padding: 10px 12px; border-radius: 12px; background: var(--card); }
+  .schedule-details summary {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    cursor: pointer; list-style: none; font-size: 12px; font-weight: 700;
+  }
+  .schedule-details summary::-webkit-details-marker { display: none; }
+  .schedule-details summary::after { content: "+"; color: var(--blue); font-size: 16px; }
+  .schedule-details[open] summary::after { content: "\2212"; }
+  .schedule-summary-list { display: grid; gap: 5px; margin-top: 8px; }
+  .schedule-summary-row { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; }
+  .schedule-summary-row span:first-child { color: var(--muted); font-weight: 700; }
+
+  .students { padding: 20px 24px 18px; display: flex; flex-direction: column; min-height: 0; }
+  .toolbar { display: flex; gap: 16px; align-items: center; margin-bottom: 18px; }
+  .search {
+    flex: 0 1 265px; height: 54px; background: #fff; border: 1px solid #dfe6f2; border-radius: 14px;
+    display: flex; align-items: center; gap: 12px; padding: 0 18px;
+  }
+  .search svg { width: 22px; height: 22px; stroke: var(--muted); fill: none; stroke-width: 2; stroke-linecap: round; }
+  .search input { border: 0; outline: 0; background: none; font: inherit; width: 100%; }
+  .toolbar .spacer { flex: 1; }
+  .toolbar .btn { height: 54px; padding: 0 22px; white-space: nowrap; }
+
+  .table-wrap { flex: 1; min-height: 0; overflow: auto; border-radius: 16px; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0 5px; }
+  thead th {
+    position: sticky; top: 0; z-index: 1;
+    background: var(--navy); color: #fff; text-align: left;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.08em; padding: 17px 16px;
+  }
+  thead th:first-child { border-radius: 14px 0 0 14px; }
+  thead th:last-child { border-radius: 0 14px 14px 0; text-align: center; }
+  tbody td { background: var(--row); padding: 0 16px; height: 51px; font-size: 15px; }
+  tbody td:first-child { border-radius: 12px 0 0 12px; color: var(--muted); width: 54px; }
+  tbody td:last-child { border-radius: 0 12px 12px 0; width: 160px; }
+  tbody tr:nth-child(even) td { background: rgba(244, 248, 254, 0.9); }
+  tbody td.empty-row { width: auto; height: 80px; text-align: center; color: var(--muted); }
+  .status-select {
+    max-width: 100%; padding: 6px 10px; border: 1px solid; border-radius: 999px;
+    font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .status-select.status-present { color: #16794f; background: #e3f6ec; border-color: #8dd5b0; }
+  .status-select.status-late { color: #9a6200; background: #fff4de; border-color: #f2c76b; }
+  .status-select.status-absent { color: #b52e2a; background: #fde8e7; border-color: #f0a9a6; }
+  .status-select.status-excused { color: #514bb1; background: #efedff; border-color: #c5c2f4; }
+  .status-select.status-pending { color: #64748b; background: #eef2f7; border-color: #cbd5e1; }
+  .remark-input {
+    width: 100%; min-width: 120px; padding: 7px 9px; border: 1px solid #dfe6f2;
+    border-radius: 8px; background: rgba(255, 255, 255, 0.75); color: var(--ink); font: inherit; font-size: 13px;
+  }
+  .remark-input:disabled { border-color: transparent; background: transparent; color: var(--muted); }
+  .row-actions { display: flex; justify-content: center; gap: 6px; }
+  .row-actions button {
+    padding: 7px 8px; border: 0; border-radius: 8px; background: transparent;
+    font: inherit; font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer;
+  }
+  .row-actions button:hover { background: rgba(37, 99, 214, 0.09); }
+  .row-actions button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .row-actions .row-edit { color: var(--blue); }
+  .row-actions .row-remove { color: var(--red); }
+  .row-actions .row-remove:hover { background: rgba(181, 46, 42, 0.09); }
+
+  .foot { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+  .stat {
+    background: var(--card); border: 1px solid #e3e9f4; border-radius: 14px;
+    height: 54px; padding: 0 18px; display: flex; align-items: center; gap: 8px; min-width: 112px;
+  }
+  .stat b { font-size: 24px; }
+  .stat span { font-size: 13px; color: var(--muted); }
+  .stat.present b { color: var(--green); }
+  .stat.late b { color: var(--amber); }
+  .stat.absent b { color: var(--red); }
+  .stat.excused b { color: var(--violet); }
+  .stat.total b { color: var(--navy); }
+  .stat.total { margin-left: 6px; }
+  .print-heading { display: none; }
+
+  #view-logs { overflow: hidden; }
+  .logs-main {
+    display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 24px; min-height: 0;
+  }
+  .logs-top {
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    padding: 22px 28px 26px;
+  }
+  .logs-top h2 { font-size: 34px; font-weight: 700; letter-spacing: -0.01em; }
+  .logs-top p { margin-top: 8px; color: var(--muted); font-size: 15px; }
+  .logs-filters {
+    display: flex; flex-wrap: wrap; align-items: end; gap: 16px; padding: 18px 22px;
+  }
+  .logs-filters label {
+    display: grid; gap: 7px; color: var(--muted); font-size: 11px;
+    font-weight: 700; letter-spacing: 0.06em;
+  }
+  .logs-filters input, .logs-filters select {
+    height: 46px; min-width: 190px; padding: 0 12px; border: 1px solid #dfe6f2;
+    border-radius: 10px; background: #fff; color: var(--ink); font: inherit;
+  }
+  .logs-filters input:focus, .logs-filters select:focus {
+    outline: 2px solid var(--blue); outline-offset: 1px;
+  }
+  .logs-results {
+    display: flex; flex-direction: column; min-height: 0; padding: 20px 24px 18px;
+  }
+  .logs-summary { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+  .logs-summary strong { color: var(--red); }
+  .logs-results .table-wrap { min-height: 180px; }
+  .logs-status { font-weight: 700; }
+  .logs-status.status-present { color: #16794f; }
+  .logs-status.status-late { color: #9a6200; }
+  .logs-status.status-absent { color: #b52e2a; }
+  .logs-status.status-excused { color: #514bb1; }
+  .logs-status.status-pending { color: var(--muted); }
+
+  @media (max-width: 1100px) {
+    #view-logs { overflow-y: auto; }
+    .logs-main { grid-template-rows: auto auto minmax(360px, 1fr); }
+    .logs-top { flex-wrap: wrap; }
+    .logs-filters input, .logs-filters select { min-width: min(190px, 72vw); }
+  }
+
+  @media print {
+    @page { margin: 14mm; }
+    html, body { height: auto; overflow: visible; background: #fff; }
+    body * { visibility: hidden !important; }
+    #view-attendance, #view-attendance * { visibility: visible !important; }
+    #view-attendance {
+      position: static; display: block; width: auto; height: auto; overflow: visible;
+    }
+    #view-attendance .rail, #view-attendance .att-side,
+    #view-attendance .top, #view-attendance .subjects,
+    #view-attendance .toolbar, #view-attendance .row-actions,
+    #view-attendance th:last-child, #view-attendance td:last-child {
+      display: none !important;
+    }
+    .att { display: block; height: auto; min-height: 0; padding: 0; }
+    .att-main { display: block; }
+    .students {
+      display: block; min-height: 0; padding: 0; border-radius: 0;
+      background: #fff; box-shadow: none;
+    }
+    .print-heading {
+      display: block; margin: 0 0 12px; color: #111;
+      font-size: 18px; font-weight: 700;
+    }
+    .table-wrap { overflow: visible; border-radius: 0; }
+    table { border-spacing: 0; }
+    thead th {
+      position: static; background: #e9edf5; color: #111;
+      border-bottom: 1px solid #999; padding: 8px;
+    }
+    thead th:first-child, thead th:last-child { border-radius: 0; }
+    tbody td, tbody tr:nth-child(even) td {
+      height: auto; padding: 7px 8px; background: #fff !important;
+      border-bottom: 1px solid #ddd; color: #111;
+    }
+    .status-select {
+      appearance: none; border: 0; padding: 0; background: transparent !important;
+      color: #111 !important; font-size: inherit; font-weight: 400;
+    }
+    .remark-input {
+      min-width: 0; padding: 0; border: 0; background: transparent;
+      color: #111; font-size: inherit;
+    }
+    .foot { margin-top: 12px; }
+    .stat { height: auto; min-width: 0; padding: 6px 10px; }
+    .stat b { font-size: 16px; }
+  }
+
+  @media (max-width: 1100px) {
+    #view-attendance { overflow-y: auto; }
+    .att-side { min-height: 78px; }
+    .about-inner { padding-top: 130px; transform: none; width: 86vw; }
+    body { overflow: auto; }
+    .att { height: auto; min-height: 100%; grid-template-columns: 1fr; padding: 20px; gap: 18px; }
+    .att-side { display: flex; justify-content: center; }
+    .att-main { grid-template-columns: 1fr; }
+    .top { grid-template-columns: 1fr; }
+    .start-wrap .btn { min-width: 0; }
+    .toolbar { flex-wrap: wrap; }
+    .foot { flex-wrap: wrap; }
+  }
+
+  .landing-fade {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 36%;
+    background: linear-gradient(180deg,
+      rgba(255,255,255,0) 0%, rgba(255,255,255,0.22) 38%,
+      rgba(255,255,255,0.62) 70%, rgba(255,255,255,0.93) 92%, #fff 100%);
+    pointer-events: none;
+  }
+  .brand, .nav.dock { z-index: 1; }
+
+  .home-scroll {
+    position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden;
+  }
+  .home-hero { position: relative; height: 100vh; height: 100dvh; }
+  .scroll-cue {
+    position: absolute; left: 50%; bottom: 3.2vh; transform: translateX(-50%); z-index: 2;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    border: 0; background: none; cursor: pointer; color: var(--navy);
+    font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  .scroll-cue svg {
+    width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .scroll-cue:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; border-radius: 8px; }
+
+  .home-info {
+    position: relative; z-index: 1;
+    background: linear-gradient(180deg, #fff 0, rgba(255,255,255,0.88) 14vh, rgba(255,255,255,0.84) 100%);
+    padding: 2vh 0 9vh; color: #0f1830;
+  }
+  .info-inner { width: min(82vw, 1180px); margin: 0 auto; }
+  .info-intro { text-align: center; padding: 3vh 0 4vh; }
+  .info-intro h2 { font-size: clamp(24px, 2.6vw, 38px); letter-spacing: -0.01em; margin-bottom: 0.6em; }
+  .info-intro p { font-size: clamp(14px, 1.2vw, 18px); line-height: 1.55; max-width: 46em; margin: 0 auto; }
+  .info-intro .info-note { margin-top: 1em; font-size: clamp(12px, 0.95vw, 14px); color: var(--muted); }
+  .info-heading { font-size: clamp(18px, 1.7vw, 26px); text-align: center; margin: 2vh 0 0.4em; }
+  .info-sub { text-align: center; color: var(--muted); font-size: clamp(13px, 1vw, 15px); line-height: 1.5; margin-bottom: 3vh; }
+
+  .tab-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6vh; margin-bottom: 6vh; }
+  .tab-card {
+    display: flex; flex-direction: column; padding: clamp(22px, 3vw, 40px);
+    background: rgba(255,255,255,0.78); border-radius: 28px;
+    box-shadow: 0 10px 34px rgba(20, 50, 100, 0.14);
+  }
+  .tab-head { display: flex; align-items: center; gap: 16px; margin-bottom: clamp(14px, 1.8vw, 22px); }
+  .tab-head h4 { font-size: clamp(22px, 2.2vw, 30px); }
+  .tab-icon {
+    display: grid; place-items: center; flex: 0 0 auto; width: clamp(40px, 3.6vw, 52px); height: clamp(40px, 3.6vw, 52px);
+    border-radius: 50%; background: rgba(37, 99, 214, 0.12); color: var(--blue);
+  }
+  .tab-icon svg { width: 55%; height: 55%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .tab-what { font-weight: 700; font-size: clamp(16px, 1.45vw, 20px); line-height: 1.4; margin-bottom: 12px; max-width: 60em; }
+  .tab-steps { padding-left: 1.3em; font-size: clamp(14px, 1.2vw, 17px); line-height: 1.55; color: #26324d; flex: 1; max-width: 60em; }
+  .tab-steps li { margin-bottom: 8px; }
+  .tab-go {
+    align-self: flex-start; margin-top: 18px; padding: 12px 22px; border: 0; border-radius: 999px;
+    background: var(--blue); color: #fff; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .tab-go:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(37, 99, 214, 0.35); }
+  .tab-go:focus-visible { outline: 2px solid var(--navy); outline-offset: 3px; }
+
+  .quick { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin: 2.4vh 0 8vh; }
+  .quick li { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-radius: 18px; background: rgba(255,255,255,0.78); box-shadow: 0 6px 20px rgba(20,50,100,0.1); font-size: 14px; line-height: 1.4; }
+  .quick b { flex: 0 0 auto; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--navy); color: #fff; font-size: 15px; }
+
+  #view-home { --blue: #fb8c4c; --navy: #fb8c4c; }
+  #view-home .scroll-cue { color: #26365f; transition: color 0.2s ease; }
+  #view-home .scroll-cue:hover, #view-home .scroll-cue:active, #view-home .scroll-cue:focus { color: #fb8c4c; }
+  #view-home .tab-icon { background: rgba(251, 140, 76, 0.13); }
+  #view-home .tab-go:hover { box-shadow: 0 6px 14px rgba(251, 140, 76, 0.38); }
+
+  .info-intro h2 .accent, .info-heading .accent { color: var(--blue); }
+  .tab-shot {
+    margin: 0 0 clamp(16px, 2vw, 26px); aspect-ratio: 16 / 9; overflow: hidden; border-radius: 18px;
+    background: #dfe8f5; border: 1px solid rgba(255,255,255,0.8);
+    box-shadow: 0 6px 18px rgba(20, 50, 100, 0.18);
+  }
+  .tab-shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+  .tab-shot.about img { object-position: center 30%; }
+
+  @media (max-width: 1100px) {
+    .info-inner { width: 88vw; }
+    .home-info { padding-top: 0; }
+    .info-intro { padding-top: 96px; }
+  }
+  @media (max-width: 760px) {
+    .tab-grid, .quick { grid-template-columns: 1fr; }
+  }
+
+  .view.active { animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  #view-about { overflow: hidden; }
+  .about-wash { position: absolute; inset: 0; pointer-events: none; background: rgba(255, 255, 255, 0.72); }
+  .about-scroll { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; }
+  .about-inner {
+    width: min(63.5vw, 900px); margin: 0 auto; padding: 8.6vh 0 6vh;
+    color: #0f1830; text-align: justify; transform: translateX(1vw); letter-spacing: -0.06em;
+    font-size: clamp(14px, 1.35vw, 20px); line-height: 1.42;
+    text-shadow: 0 0 5px rgba(255,255,255,0.55), 0 1px 3px rgba(12,28,66,0.42), 0 3px 12px rgba(12,28,66,0.32);
+  }
+  .about-inner h2 {
+    text-align: center; text-transform: uppercase;
+    font-size: clamp(16px, 1.6vw, 24px); font-weight: 700; letter-spacing: 0.02em;
+    margin-bottom: 0.7em;
+  }
+  .about-inner p { margin-bottom: 1.4em; }
+  .about-inner p.sign { margin-bottom: 0; }
+  .about-inner p.names { margin-bottom: 0; text-align: left; }
+  .about-team { margin: 3.2vh auto 0; text-align: center; width: clamp(180px, 19.2vw, 300px); }
+  .about-team img {
+    display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover;
+    box-shadow: 0 5px 16px rgba(0,0,0,0.38);
+  }
+  .about-team .cap { margin-top: 0.7em; font-size: 0.95em; line-height: 1.15; }
+  .about-team .cap small { display: block; font-size: 0.62em; letter-spacing: 0.03em; margin-top: 0.15em; }
+
+     #view-scanner { overflow-y: auto; }
+  #view-scanner .att { grid-template-columns: 76px minmax(0, 1fr) 76px; }
+  #view-scanner .att::after { content: ""; }
+
+  .scan-main {
+    display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
+    grid-template-rows: auto minmax(0, 1fr); gap: 24px; min-height: 0;
+    width: 100%; max-width: 1180px; margin: 0 auto;
+  }
+  .scan-top { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 28px 26px; grid-column: 1 / -1; }
+  .scan-top h2 { font-size: 34px; font-weight: 700; letter-spacing: -0.01em; }
+  .scan-top .date { margin-top: 8px; color: var(--muted); font-size: 15px; letter-spacing: 0.03em; }
+
+  .scan-card {
+    padding: 24px; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 18px; min-height: 0; overflow: auto;
+  }
+  .scan-source-row { display: flex; justify-content: center; gap: 14px; width: min(100%, 460px); }
+  .scan-source-row label, .usb-panel label {
+    display: grid; gap: 6px; flex: 1; color: var(--muted);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  }
+  .scan-source-row select, .usb-panel input {
+    height: 46px; min-width: 0; width: 100%; padding: 0 12px;
+    border: 1px solid #dfe6f2; border-radius: 10px; background: #fff;
+    color: var(--ink); font: inherit; letter-spacing: normal;
+  }
+  .scan-source-row select:focus, .usb-panel input:focus {
+    outline: 2px solid var(--blue); outline-offset: 1px;
+  }
+  [hidden] { display: none !important; }
+  .camera-panel { display: flex; flex-direction: column; align-items: center; gap: 18px; width: 100%; }
+  .usb-panel { width: min(100%, 460px); padding: 24px; border-radius: 18px; background: var(--card); }
+  .usb-panel form { display: grid; gap: 12px; }
+  .usb-panel .usb-input-row { display: flex; gap: 10px; }
+  .usb-panel .usb-input-row input { flex: 1; }
+  .usb-panel .usb-input-row .btn { flex: 0 0 auto; padding: 0 18px; }
+  .usb-panel .usb-hint { margin-top: 12px; color: var(--muted); font-size: 12px; line-height: 1.4; }
+ .scan-stage {
+  position: relative; overflow: hidden; flex: none;
+  width: min(100%, 460px); min-height: 220px;
+  border-radius: 22px; background: #0f1830;
+  display: grid; place-items: center;
+}
+ #scanner-viewport { position: absolute; inset: 0; z-index: 0; }
+ #scanner-viewport video { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .scan-idle { position: relative; z-index: 1; color: #9fb0d3; font-size: 15px; text-align: center; padding: 0 28px; }
+  .btn:disabled { cursor: not-allowed; opacity: 0.55; }
+
+ .student-dialog {
+   position: fixed; inset: 50% auto auto 50%; transform: translate(-50%, -50%); margin: 0;
+   width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto;
+   border: 0; border-radius: 20px; padding: 26px; color: var(--ink);
+   box-shadow: 0 18px 60px rgba(20, 40, 90, 0.3);
+ }
+ .student-dialog::backdrop { background: rgba(15, 24, 48, 0.5); }
+ .student-dialog h2 { font-size: 22px; margin-bottom: 18px; }
+ .student-dialog form { display: grid; gap: 12px; }
+ .student-dialog label { font-size: 13px; font-weight: 700; }
+ .student-dialog input {
+   height: 46px; width: 100%; margin-top: 6px; padding: 0 12px;
+   border: 1px solid #dfe6f2; border-radius: 10px; font: inherit;
+ }
+ .student-dialog textarea {
+   width: 100%; min-height: 100px; margin-top: 6px; padding: 10px 12px;
+   border: 1px solid #dfe6f2; border-radius: 10px; font: inherit; resize: vertical;
+ }
+ .student-dialog input:focus { outline: 2px solid var(--blue); outline-offset: 1px; }
+ .student-dialog textarea:focus { outline: 2px solid var(--blue); outline-offset: 1px; }
+ .schedule-days { border: 0; }
+ .schedule-days legend, .schedule-times-label { margin-bottom: 7px; font-size: 13px; font-weight: 700; }
+ .schedule-times-label { display: block; }
+ .weekday-picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+ .weekday-chip {
+   display: flex; align-items: center; justify-content: center; gap: 5px;
+   min-height: 34px; padding: 5px; border: 1px solid #dfe6f2; border-radius: 9px;
+   background: var(--card); font-size: 11px !important; cursor: pointer;
+ }
+ .student-dialog .weekday-chip input[type="checkbox"] {
+   width: 14px; height: 14px; margin: 0; accent-color: var(--blue);
+ }
+ .schedule-times { display: grid; gap: 6px; }
+ .schedule-time-row {
+   display: grid; grid-template-columns: minmax(62px, 0.7fr) 1fr 1fr;
+   align-items: end; gap: 7px; padding: 7px 9px; border-radius: 9px;
+   background: var(--card);
+ }
+ .schedule-time-row[hidden] { display: none; }
+ .schedule-time-row > strong { padding-bottom: 10px; font-size: 11px; }
+ .schedule-time-row > label { font-size: 10px !important; }
+ .student-dialog .schedule-time-row input[type="time"] {
+   height: 36px; width: 100%; margin-top: 4px; padding: 0 5px; font-size: 12px;
+ }
+ .student-dialog .schedule-time-row input[type="time"]:disabled { background: #eef2f7; color: var(--muted); }
+ .schedule-locked-hint { padding: 8px 10px; border-radius: 8px; background: #eef3fb; }
+ .student-dialog .dialog-error { min-height: 18px; color: var(--red); font-size: 13px; }
+ .student-dialog .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
+ .student-dialog .dialog-actions .btn { height: 44px; min-width: 130px; padding: 0 18px; }
+ .subject-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+ .student-dialog .subject-dialog-heading h2 { margin: 0; }
+ .student-dialog .subject-dialog-heading .btn { height: 44px; min-width: 150px; padding: 0 18px; }
+ .student-dialog .subject-footer-actions { width: 100%; justify-content: space-between; }
+ .student-dialog .subject-footer-actions .btn { min-width: 150px; }
+ .subject-edit-actions { display: flex; justify-content: flex-end; }
+ .subject-edit-actions .btn { height: 44px; min-width: 150px; padding: 0 18px; }
+ #remove-student-message { overflow-wrap: anywhere; }
+ .import-summary { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+ #import-preview { overflow-wrap: anywhere; }
+ .remark-input.has-note::placeholder { color: #b52e2a; opacity: 1; }
+
+  .frame { position: absolute; inset: 14%; pointer-events: none; z-index: 2; }
+  .frame i { position: absolute; width: 30px; height: 30px; border: 4px solid #fff; }
+  .frame i:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0; border-top-left-radius: 12px; }
+  .frame i:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0; border-top-right-radius: 12px; }
+  .frame i:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0; border-bottom-left-radius: 12px; }
+  .frame i:nth-child(4) { bottom: 0; right: 0; border-left: 0; border-top: 0; border-bottom-right-radius: 12px; }
+
+  .scan-controls { display: flex; gap: 14px; width: min(100%, 460px); }
+  .scan-controls .btn { flex: 1; }
+  .btn.stop { background: var(--red); }
+  .btn.go { background: var(--blue); }
+
+  .scan-result {
+    width: min(100%, 460px); min-height: 76px; border-radius: 16px; padding: 14px 18px;
+    border: 1.5px solid #dfe6f2; display: grid; grid-template-columns: 44px minmax(0, 1fr);
+    gap: 12px; align-items: center; text-align: left;
+  }
+  .scan-result-icon {
+    width: 42px; height: 42px; border: 2px solid currentColor; border-radius: 50%;
+    display: grid; place-items: center; font-size: 21px; font-weight: 800;
+  }
+  .scan-result-copy { min-width: 0; display: grid; gap: 4px; }
+  .scan-result-title { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+  .scan-result-message { color: var(--ink); font-size: 14px; font-weight: 500; line-height: 1.35; overflow-wrap: anywhere; }
+  .scan-result.state-idle, .scan-result.state-ok { background: #f3f6fb; border-color: #dfe6f2; color: var(--navy); }
+  .scan-result.state-present { background: #e3f6ec; border-color: #8dd5b0; color: #16794f; }
+  .scan-result.state-late { background: #fff4de; border-color: #f2c76b; color: #9a6200; }
+  .scan-result.state-absent, .scan-result.state-bad, .scan-result.state-closed { background: #fde8e7; border-color: #f0a9a6; color: #b52e2a; }
+  .scan-result.state-unknown { background: #efedff; border-color: #c5c2f4; color: #514bb1; }
+  .scan-result.state-repeat, .scan-result.state-out { background: #e8f1ff; border-color: #a9c5f6; color: #2555a4; }
+  .scan-result.state-warn { background: #fff8e9; border-color: #f2d89c; color: #805500; }
+  .scan-log-badge {
+    align-self: center; padding: 4px 8px; border: 1px solid transparent;
+    border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap;
+  }
+  .scan-log-badge.state-present { background: #e3f6ec; color: #16794f; border-color: #8dd5b0; }
+  .scan-log-badge.state-late { background: #fff4de; color: #9a6200; border-color: #f2c76b; }
+  .scan-log-badge.state-absent, .scan-log-badge.state-bad { background: #fde8e7; color: #b52e2a; border-color: #f0a9a6; }
+  .scan-log-badge.state-unknown { background: #efedff; color: #514bb1; border-color: #c5c2f4; }
+  .scan-log-badge.state-repeat, .scan-log-badge.state-out { background: #e8f1ff; color: #2555a4; border-color: #a9c5f6; }
+  .scan-log-badge.state-ok, .scan-log-badge.state-idle { background: #f3f6fb; color: var(--navy); border-color: #dfe6f2; }
+  .scan-log-badge.state-warn { background: #fff8e9; color: #805500; border-color: #f2d89c; }
+
+  .scan-log { padding: 24px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .scan-log h3 { font-size: 20px; font-weight: 700; margin-left: 4px; }
+  .scan-count { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .scan-count .stat { min-width: 0; padding: 0 6px; justify-content: center; gap: 5px; }
+  .scan-count .stat span { font-size: 11px; }
+  #scan-list { list-style: none; overflow: auto; display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
+  #scan-list li {
+    background: var(--row); border-radius: 12px; padding: 12px 16px; font-size: 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  #scan-list li span:first-child { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  #scan-list li span:last-child { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .scan-empty { color: var(--muted); font-size: 14px; margin-left: 4px; }
+
+  @media (max-width: 1100px) {
+    #view-scanner .att { grid-template-columns: 1fr; }
+    #view-scanner .att::after { display: none; }
+    .scan-main { grid-template-columns: 1fr; }
+    .scan-top { flex-wrap: wrap; }
+    .scan-stage { height: min(60vw, 420px); }
+    .scan-source-row { flex-wrap: wrap; }
+    .scan-source-row label { min-width: 180px; }
+    .usb-panel .usb-input-row { flex-wrap: wrap; }
+    .usb-panel .usb-input-row .btn { width: 100%; }
+  }
+
+  html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
+  * { scrollbar-width: thin; scrollbar-color: rgba(38, 54, 95, 0.55) rgba(255, 255, 255, 0.35); }
+  *::-webkit-scrollbar { width: 12px; height: 12px; }
+  *::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.35); border-radius: 999px; }
+  *::-webkit-scrollbar-thumb {
+    background: rgba(38, 54, 95, 0.55); border-radius: 999px;
+    border: 3px solid transparent; background-clip: content-box; min-height: 44px;
+  }
+  *::-webkit-scrollbar-thumb:hover { background: rgba(38, 54, 95, 0.8); background-clip: content-box; }
+  *::-webkit-scrollbar-corner { background: transparent; }
+
+  #view-attendance, #view-logs, #view-scanner { overflow-y: auto; overflow-x: hidden; }
+  .view { overscroll-behavior: contain; }
+  .home-scroll, .about-scroll { overscroll-behavior: contain; }
+
+  @media (max-width: 1100px) {
+    .att, #view-scanner .att, #view-logs .att { grid-template-columns: minmax(0, 1fr); }
+    .att-main, .scan-main { grid-template-columns: minmax(0, 1fr); }
+    .att-main, .scan-main, .logs-main, .glass, .top, .students, .subjects, .scan-card, .scan-log, .logs-results { min-width: 0; max-width: 100%; }
+    .top { grid-template-columns: minmax(0, 1fr); }
+    .subjects { overflow: visible; }
+    .table-wrap { flex: none; max-height: 70vh; max-height: 70dvh; -webkit-overflow-scrolling: touch; }
+    table { min-width: 720px; }
+    .logs-results .table-wrap { max-height: 60dvh; }
+    #scan-list { flex: none; max-height: 320px; }
+    .att, #view-scanner .att { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+    .about-scroll { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  }
+
+  @media screen and (max-width: 760px) {
+    .att { padding: 14px 12px calc(20px + env(safe-area-inset-bottom, 0px)); gap: 12px; }
+    .rail { top: calc(14px + env(safe-area-inset-top, 0px)); left: 14px; }
+    .glass { border-radius: 20px; }
+
+    .top, .scan-top, .logs-top { padding: 16px 18px 18px; gap: 14px; }
+    .top h2, .scan-top h2, .logs-top h2 { font-size: 26px; }
+    .top .date, .scan-top .date, .logs-top p { font-size: 13px; margin-top: 4px; }
+    .scan-top, .logs-top { flex-direction: column; align-items: stretch; }
+    .session { min-width: 0; width: 100%; padding: 12px 16px; }
+    .session .time { font-size: 24px; }
+    .start-wrap .btn { width: 100%; }
+    .session-actions { flex-wrap: wrap; }
+    .session-actions .btn { flex: 1 1 140px; }
+    .btn { height: 48px; padding: 0 18px; }
+    .logs-top .btn { width: 100%; }
+
+    .subjects, .students, .logs-results, .scan-card, .scan-log { padding: 16px 14px; }
+    .att-main, .scan-main, .logs-main { gap: 14px; }
+
+    .toolbar { gap: 10px; margin-bottom: 14px; }
+    .toolbar .spacer { display: none; }
+    .search { flex: 1 1 100%; height: 48px; }
+    .toolbar .btn { flex: 1 1 calc(50% - 5px); height: 48px; padding: 0 12px; }
+    #student-add { flex-basis: 100%; }
+
+    .foot { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .foot .stat { min-width: 0; height: 48px; }
+    .foot .stat.total { margin-left: 0; grid-column: 1 / -1; }
+
+    thead th { padding: 14px 12px; font-size: 11px; }
+    tbody td { padding: 0 12px; font-size: 14px; }
+
+    .logs-filters { flex-direction: column; align-items: stretch; padding: 16px 14px; gap: 12px; }
+    .logs-filters input, .logs-filters select { width: 100%; min-width: 0; }
+
+    .scan-stage { width: 100%; height: min(78vw, 360px); min-height: 200px; }
+    .scan-source-row label { min-width: 100%; }
+    .scan-controls { flex-wrap: wrap; }
+    .scan-controls .btn { flex: 1 1 140px; }
+    .usb-panel { padding: 16px; }
+    .scan-result { padding: 12px 14px; }
+
+    .info-inner { width: 90vw; }
+    .info-intro { padding-top: 92px; }
+    .tab-card { border-radius: 22px; padding: 20px 18px; }
+    .tab-go { width: 100%; align-self: stretch; text-align: center; }
+    .quick li { padding: 14px; }
+    .nav.dock { gap: 8px; padding: 6px 14px; }
+    .nav.dock button { width: 44px; height: 44px; }
+    .nav.dock svg { width: 24px; height: 24px; }
+    .brand p { font-size: max(8px, 3.6vw); }
+    .scroll-cue { bottom: calc(2.4vh + env(safe-area-inset-bottom, 0px)); }
+
+    .about-inner { width: 88vw; padding-top: 118px; padding-bottom: 40px; text-align: left; font-size: 15.5px; line-height: 1.5; }
+    .about-inner h2 { font-size: 18px; }
+    .about-team { width: min(72vw, 280px); }
+
+    .student-dialog {
+      width: calc(100vw - 24px); max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px);
+      padding: 20px 16px; border-radius: 18px;
+    }
+    .student-dialog .dialog-actions { flex-wrap: wrap; }
+    .student-dialog .dialog-actions .btn, .student-dialog .subject-footer-actions .btn { flex: 1 1 120px; min-width: 0; }
+    .subject-dialog-heading { flex-wrap: wrap; }
+    .student-dialog .subject-dialog-heading .btn { min-width: 0; }
+    .schedule-time-row { grid-template-columns: 1fr 1fr; }
+    .schedule-time-row > strong { grid-column: 1 / -1; padding-bottom: 0; }
+
+    input, select, textarea { font-size: 16px !important; }
+  }
+
+  @media screen and (max-width: 380px) {
+    .top h2, .scan-top h2, .logs-top h2 { font-size: 23px; }
+    .weekday-picker { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+    .toolbar .btn { flex-basis: 100%; }
+  }
+
+  @media (max-height: 480px) and (orientation: landscape) {
+    .scroll-cue span { display: none; }
+  }
+
+  .scan-card { justify-content: flex-start; }
+  .scan-card > :first-child { margin-top: auto; }
+  .scan-card > :last-child { margin-bottom: auto; }
+  .scan-card > * { flex-shrink: 0; }
+  @media (min-width: 1101px) and (max-height: 820px) {
+    .att { padding-top: 28px; padding-bottom: 18px; }
+    .scan-main { gap: 16px; }
+    .scan-top { padding: 14px 24px 16px; }
+    .scan-top h2 { font-size: 28px; }
+    .scan-card { padding: 16px; gap: 12px; }
+    .scan-stage { min-height: 160px; }
+    .scan-result { min-height: 64px; padding: 10px 16px; }
+    .scan-card .btn { height: 46px; }
+  }
+
+  .stamp-time { display: block; font-weight: 600; white-space: nowrap; }
+  .stamp-date { display: block; margin-top: 1px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+  tbody td:nth-child(3) { min-width: 120px; }
+  @media print { .stamp-date { color: #444; } }
+
+  @media (max-width: 1100px) {
+    .toolbar-group { display: contents; }
+  }
+
+  @media (min-width: 1101px) {
+    .att { grid-template-columns: 76px minmax(0, 1fr); }
+    .att-main { grid-template-columns: minmax(230px, 18vw) minmax(0, 1fr); }
+    .att-main > *, .scan-main > *, .logs-main > * { min-width: 0; }
+    .top { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+    .top h2 { white-space: nowrap; }
+
+    .toolbar { flex-wrap: wrap; justify-content: space-between; gap: 12px 16px; }
+    .toolbar-group { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .toolbar-left { flex: 1 1 auto; }
+    .toolbar-right { flex: 0 0 auto; margin-left: auto; }
+    .search { flex: 1 1 220px; min-width: 150px; max-width: 340px; }
+  }
+
+  @media (min-width: 1101px) and (max-width: 1680px) {
+    .att { padding-right: 24px; gap: 18px; }
+    .att-main { grid-template-columns: minmax(230px, 17vw) minmax(0, 1fr); gap: 18px; }
+    .badge-live { padding: 6px 12px; right: 44px; font-size: 11px; }
+    .top, .scan-top { padding: 16px 22px 18px; gap: 14px; }
+    .top h2, .scan-top h2, .logs-top h2 { font-size: 30px; }
+    .start-wrap .btn { min-width: 200px; }
+    .session { min-width: 170px; padding: 12px 18px; }
+    .session-actions { gap: 8px; }
+    .session-actions .btn { padding: 0 14px; }
+    .subjects { padding: 20px 18px; }
+    .students { padding: 16px 18px 14px; }
+    .toolbar .btn { height: 46px; padding: 0 15px; font-size: 14px; }
+    .toolbar-group { gap: 10px; }
+    .search { height: 46px; padding: 0 14px; }
+    .toolbar { margin-bottom: 14px; }
+    thead th { padding: 14px 10px; }
+    tbody td { padding: 0 10px; }
+    tbody td:first-child { width: 44px; }
+    tbody td:last-child { width: 130px; }
+    .remark-input { min-width: 100px; }
+    .stat { min-width: 100px; padding: 0 14px; }
+  }
+
+  @media (min-width: 1101px) and (max-width: 1320px) {
+    .toolbar .btn { padding: 0 12px; font-size: 13px; }
+    .toolbar-group { gap: 8px; }
+    .session-actions .btn { padding: 0 11px; font-size: 14px; }
+    .start-wrap .btn { min-width: 170px; }
+  }
+
+  @media (min-width: 1101px) and (max-height: 700px) {
+    .att { padding-top: 16px; padding-bottom: 14px; }
+    .att-main, .scan-main, .logs-main { gap: 14px; }
+    .top, .scan-top, .logs-top { padding: 12px 22px 14px; gap: 14px; }
+    .top h2, .scan-top h2, .logs-top h2 { font-size: 26px; }
+    .top .date, .scan-top .date, .logs-top p { margin-top: 3px; font-size: 13px; }
+    .session { padding: 8px 16px; }
+    .session .time { margin-top: 2px; font-size: 22px; }
+    .btn { height: 44px; }
+    .start-wrap { gap: 4px; }
+    .subjects { padding: 16px 16px; gap: 10px; }
+    .students { padding: 12px 16px 12px; }
+    .toolbar { margin-bottom: 10px; gap: 10px 12px; }
+    .toolbar .btn, .search { height: 42px; }
+    thead th { padding: 11px 10px; }
+    tbody td { height: 46px; }
+    .foot { margin-top: 10px; }
+    .stat { height: 44px; }
+    .stat b { font-size: 21px; }
+    .logs-filters { padding: 12px 18px; }
+    .logs-results { padding: 14px 18px 12px; }
+    .scan-card .btn { height: 42px; }
+  }
+
+</style>
+</head>
+<body>
+<div class="bg"></div>
+
+<section class="view active" id="view-home">
+  <div class="home-scroll" id="home-scroll">
+    <div class="home-hero">
+      <div class="landing-fade"></div>
+      <div class="brand">
+        <h1>chro<span id="nolo">nolo</span>g<i id="base"></i></h1>
+        <p>a website by sinister six</p>
+      </div>
+      <nav class="nav dock" id="nav-home" aria-label="Main"></nav>
+      <button class="scroll-cue" id="scroll-cue" type="button" aria-label="Scroll down to learn more">
+        <span>Learn more</span>
+        <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </div>
+
+    <div class="home-info" id="home-info">
+      <div class="info-inner">
+        <header class="info-intro">
+          <h2>Welcome to <span class="accent">Chronolog</span>!</h2>
+          <p><b>Chronolog</b> is a simple attendance system for classrooms. Set up your subjects and students once, scan each student&rsquo;s QR code as they arrive, and <b>Chronolog</b> records who is present, late, absent or excused&mdash;then keeps every record in one place so you can look it up, print it or export it later.</p>
+          <p class="info-note">Your subjects, students and attendance are saved in this browser, on this device.</p>
+        </header>
+
+        <h3 class="info-heading">How do you use <span class="accent">Chronolog</span>?</h3>
+        <ol class="quick">
+          <li><b>1</b><span>Add your subject and its schedule in <em>Attendance</em>.</span></li>
+          <li><b>2</b><span>Add your students by student number.</span></li>
+          <li><b>3</b><span>Start the class, then scan QR codes in <em>Scanner</em>.</span></li>
+        </ol>
+
+        <h3 class="info-heading">Getting around</h3>
+        <p class="info-sub">Move the cursor over (or tap) the logo at the top to open the menu. Each icon is a tab, described below.</p>
+
+        <div class="tab-grid">
+          <article class="tab-card">
+            <div class="tab-head">
+              <span class="tab-icon" data-icon="attendance"></span>
+              <h4>Scanner</h4>
+            </div>
+            <figure class="tab-shot"><img src="previews/scanner.jpg" alt="Preview of the Scanner tab"></figure>
+            <p class="tab-what">Records attendance by scanning each student&rsquo;s QR code.</p>
+            <ol class="tab-steps">
+              <li>Choose how to scan: <b>Camera</b> or <b>USB scanner</b>.</li>
+              <li>For the camera, pick one and press <b>Start Camera</b>. For a USB scanner, click the input field and scan.</li>
+              <li>Hold the student&rsquo;s QR code to the camera. The result box shows who was recorded, and <b>Recent Scans</b> keeps count of present, late and absent. Scan the same code again when a student leaves to record their time out.</li>
+              <li>Press <b>Stop</b> when you&rsquo;re done.</li>
+            </ol>
+            <button class="tab-go" type="button" data-go="scanner">Open Scanner <span aria-hidden="true">&rarr;</span></button>
+          </article>
+
+          <article class="tab-card">
+            <div class="tab-head">
+              <span class="tab-icon" data-icon="user"></span>
+              <h4>Attendance</h4>
+            </div>
+            <figure class="tab-shot"><img src="previews/attendance.jpg" alt="Preview of the Attendance tab"></figure>
+            <p class="tab-what">Your class workspace: subjects, schedules, students and the attendance table.</p>
+            <ol class="tab-steps">
+              <li>Press <b>Add Subject</b> and choose its class days and times.</li>
+              <li>Press <b>Add Student</b> and enter a student number, or press <b>Import CSV</b> to load a whole roster from a .csv file. Edit or remove students any time.</li>
+              <li>Press <b>Start Class</b> when the session begins. Students scanned after the 15-minute grace period are marked late, and anyone unscanned becomes absent when you <b>End Class</b> or the class ends. Scanning a student a second time records their <b>time out</b>; leaving within 30 minutes marks them absent.</li>
+              <li>Change a status by hand when needed&mdash;excused entries need a short reason. Use <b>Export to Excel</b> or <b>Print</b> for a copy.</li>
+            </ol>
+            <button class="tab-go" type="button" data-go="attendance">Open Attendance <span aria-hidden="true">&rarr;</span></button>
+          </article>
+
+          <article class="tab-card">
+            <div class="tab-head">
+              <span class="tab-icon" data-icon="logs"></span>
+              <h4>Logs</h4>
+            </div>
+            <figure class="tab-shot"><img src="previews/logs.jpg" alt="Preview of the Logs tab"></figure>
+            <p class="tab-what">The saved history of every attendance record.</p>
+            <ol class="tab-steps">
+              <li>Pick a <b>Date</b> to see that day&rsquo;s records.</li>
+              <li>Pick a <b>Subject</b>, or leave it on <b>All subjects</b>.</li>
+              <li>Read each student&rsquo;s status, time in, time out and remarks in the table below.</li>
+            </ol>
+            <button class="tab-go" type="button" data-go="logs">Open Logs <span aria-hidden="true">&rarr;</span></button>
+          </article>
+
+          <article class="tab-card">
+            <div class="tab-head">
+              <span class="tab-icon" data-icon="info"></span>
+              <h4>About</h4>
+            </div>
+            <figure class="tab-shot about"><img src="assets/team.jpg" alt="The Sinister Six, BSIT - 1A"></figure>
+            <p class="tab-what">A little message from us!</p>
+            <button class="tab-go" type="button" data-go="about">Open About <span aria-hidden="true">&rarr;</span></button>
+          </article>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="view" id="view-scanner">
+  <div class="att">
+    <aside class="att-side"></aside>
+
+    <div class="scan-main">
+      <header class="glass scan-top">
+        <div>
+          <h2>Scanner</h2>
+          <div class="date" id="scan-today"></div>
+        </div>
+        <div class="session is-upcoming" id="scanner-session">
+          <div class="lbl"><span class="dot"></span><span id="scanner-session-label">NO SUBJECT</span></div>
+          <div class="time" id="scanner-session-time">--:--:--</div>
+          <div class="session-next" id="scanner-session-next">Next: No subject scheduled</div>
+        </div>
+      </header>
+
+      <main class="glass scan-card">
+        <div class="scan-source-row">
+          <label for="scan-source">SCAN WITH
+            <select id="scan-source">
+              <option value="camera">Camera</option>
+              <option value="usb">USB scanner</option>
+            </select>
+          </label>
+          <label id="scan-camera-wrap" for="scan-camera">CAMERA
+            <select id="scan-camera">
+              <option value="">Default (rear camera when available)</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="camera-panel" id="camera-panel">
+          <div class="scan-stage">
+            <div id="scanner-viewport"></div>
+            <div class="scan-idle" id="scan-idle">Ready. Scan a student QR code.</div>
+          </div>
+
+          <div class="scan-controls">
+            <button class="btn go" type="button" id="scan-start">&#9654;&nbsp; Start Camera</button>
+            <button class="btn stop" type="button" id="scan-stop" disabled>&#9632;&nbsp; Stop</button>
+          </div>
+        </div>
+
+        <div class="usb-panel" id="usb-panel" hidden>
+          <form id="usb-scan-form">
+            <label for="usb-scan-input">USB scanner input</label>
+            <div class="usb-input-row">
+              <input id="usb-scan-input" type="text" inputmode="none" autocomplete="off" maxlength="200">
+              <button class="btn go" type="submit">Record scan</button>
+            </div>
+          </form>
+          <p class="usb-hint">Click the field, then scan. Set the USB scanner to keyboard/HID mode with an Enter suffix.</p>
+        </div>
+
+        <div class="scan-result" id="scan-result" role="status" aria-live="polite">Waiting for a scan&hellip;</div>
+      </main>
+
+      <aside class="glass scan-log">
+        <h3>Recent Scans</h3>
+        <div class="scan-count">
+          <div class="stat present"><b id="cnt-present">0</b><span>Present</span></div>
+          <div class="stat late"><b id="cnt-late">0</b><span>Late</span></div>
+          <div class="stat absent"><b id="cnt-absent">0</b><span>Absent</span></div>
+        </div>
+        <ul id="scan-list"></ul>
+        <div class="scan-empty" id="scan-empty">No scans yet.</div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="view" id="view-attendance">
+  <div class="att">
+    <aside class="att-side"></aside>
+
+    <div class="att-main">
+
+      <header class="glass top">
+        <div>
+          <h2>Attendance</h2>
+          <div class="date" id="today"></div>
+        </div>
+        <div class="session" id="class-session">
+          <div class="lbl"><span class="dot"></span><span id="class-session-label">NO SUBJECT</span></div>
+          <div class="time" id="class-session-time">--:--:--</div>
+        </div>
+        <div class="start-wrap">
+          <button class="btn start" type="button" id="class-start">&#9654;&nbsp; Start Class</button>
+          <small id="class-schedule-hint">Choose class days and times</small>
+        </div>
+        <div class="session-actions">
+          <button class="btn print" type="button" id="class-reset" disabled>Reset Timer</button>
+          <button class="btn end" type="button" id="class-end" disabled>&#9632;&nbsp; End Class</button>
+        </div>
+      </header>
+
+      <aside class="glass subjects">
+        <h3>Subjects &amp; Schedule</h3>
+        <button class="btn add wide" type="button" id="subject-add">+&nbsp; Add Subject</button>
+        <div id="subject-list"></div>
+        <div class="schedule-link" id="subject-schedule">No subject schedule yet.</div>
+        <div class="hint">Weekly schedule. Late after a 15-minute grace period; unscanned students become absent at class end; leaving within 30 minutes counts as absent.</div>
+      </aside>
+
+      <main class="glass students">
+        <div class="toolbar">
+          <div class="toolbar-group toolbar-left">
+            <label class="search">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+              <input type="search" aria-label="Search student">
+            </label>
+            <button class="btn add" type="button" id="student-add">+&nbsp; Add Student</button>
+            <button class="btn print" type="button" id="student-import">+&nbsp; Import CSV</button>
+            <input type="file" id="student-import-file" accept=".csv,text/csv" hidden>
+          </div>
+          <div class="toolbar-group toolbar-right">
+            <button class="btn excel" type="button" id="attendance-export">&darr;&nbsp; Export to Excel</button>
+            <button class="btn print" type="button" id="attendance-print">Print</button>
+            <button class="btn danger" type="button" id="attendance-reset">Reset</button>
+          </div>
+        </div>
+
+        <div class="print-heading" id="print-heading"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>STUDENT ID</th><th>NAME</th><th>STATUS</th>
+                <th>TIME IN</th><th>TIME OUT</th><th>REMARKS</th><th>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+
+        <div class="foot">
+          <div class="stat present"><b id="stat-present">0</b><span>Present</span></div>
+          <div class="stat late"><b id="stat-late">0</b><span>Late</span></div>
+          <div class="stat absent"><b id="stat-absent">0</b><span>Absent</span></div>
+          <div class="stat excused"><b id="stat-excused">0</b><span>Excused</span></div>
+          <div class="stat total"><b id="stat-total">0</b><span>Total</span></div>
+        </div>
+      </main>
+    </div>
+  </div>
+</section>
+
+<section class="view" id="view-logs">
+  <div class="att">
+    <aside class="att-side"></aside>
+    <main class="logs-main">
+      <header class="glass logs-top">
+        <div>
+          <h2>Attendance Logs</h2>
+          <p>Search saved attendance by date and subject.</p>
+        </div>
+        <button class="btn print" type="button" id="logs-back">&larr;&nbsp; Attendance</button>
+      </header>
+
+      <div class="glass logs-filters">
+        <label for="logs-date">DATE
+          <input id="logs-date" type="date">
+        </label>
+        <label for="logs-subject">SUBJECT
+          <select id="logs-subject">
+            <option value="">All subjects</option>
+          </select>
+        </label>
+      </div>
+
+      <section class="glass logs-results" aria-label="Attendance results">
+        <p class="logs-summary" id="logs-summary" role="status" aria-live="polite"></p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>SUBJECT</th><th>STUDENT ID</th><th>NAME</th><th>STATUS</th><th>TIME IN</th><th>TIME OUT</th><th>REMARKS</th></tr>
+            </thead>
+            <tbody id="logs-rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</section>
+
+<section class="view" id="view-about">
+  <div class="about-wash"></div>
+  <div class="about-scroll">
+    <div class="about-inner">
+      <h2>About Us</h2>
+      <p>Pardon the mephistophelian name&mdash;we are Sinister Six! We did not create <b>Chronolog</b> with the intention of becoming just another attendance management website among countless others, nor did we seek to compete with established platforms&mdash;for we ourselves recognize that such an ambition would be rather unrealistic and nugatory. Instead, our goal was to bring a project conceived, developed, and brought to life by students of Gordon College, for our very own academic community&mdash;similar to GC-LAMP. More importantly, we envisioned <b>Chronolog</b> as a means of helping both educators and students monitor and manage punctuality with greater efficiency and convenience.</p>
+      <p>As first-year IT students, developing an entire website after only a few months of learning the fundamentals of programming was no small undertaking. <b>Chronolog</b> is far from perfect, and so are we. Yet, while we acknowledge its shortcomings and the limitations of our current capabilities, we recognize that neither defines the extent of what we can accomplish. We may still have much to learn, but we are certainly not beyond improvement&mdash;and this project is only the beginning.</p>
+      <p>We hope our digital platform serves you well in your endeavors!</p>
+      <p class="sign">Sincerely,</p>
+      <p class="names">Basa<br>Egenias<br>Pascual<br>Romias<br>Talosig<br>Yap</p>
+      <figure class="about-team">
+        <img src="assets/team.jpg" alt="The Sinister Six, BSIT - 1A">
+        <figcaption class="cap">The Sinister Six<small>BSIT - 1A</small></figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<dialog class="student-dialog" id="student-dialog" aria-labelledby="student-dialog-title">
+  <form id="student-form">
+    <h2 id="student-dialog-title">Add Student</h2>
+    <label for="student-number">Student number
+      <input id="student-number" name="studentNumber" type="text" required maxlength="80" autocomplete="off">
+    </label>
+    <label for="student-name">Name <small>(optional)</small>
+      <input id="student-name" name="studentName" type="text" maxlength="120" autocomplete="name">
+    </label>
+    <div class="dialog-error" id="student-form-error" role="alert"></div>
+    <div class="dialog-actions">
+      <button class="btn print" type="button" id="student-cancel">Cancel</button>
+      <button class="btn add" type="submit" id="student-submit">Add Student</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="student-dialog" id="subject-dialog" aria-labelledby="subject-dialog-title">
+  <form id="subject-form">
+    <div class="subject-dialog-heading">
+      <h2 id="subject-dialog-title">Add Subject</h2>
+      <div class="subject-edit-actions" id="subject-edit-actions" hidden>
+        <button class="btn danger" type="button" id="subject-remove">Remove Subject</button>
+      </div>
+    </div>
+    <input id="subject-id" name="subjectId" type="hidden">
+    <label for="subject-name">Subject name
+      <input id="subject-name" name="subjectName" type="text" required maxlength="80" autocomplete="off">
+    </label>
+    <label for="subject-teacher-name">Teacher name
+      <input id="subject-teacher-name" name="teacherName" type="text" required maxlength="120" autocomplete="name">
+    </label>
+    <fieldset class="schedule-days" id="subject-days">
+      <legend>Class days</legend>
+      <div class="weekday-picker">
+        <label class="weekday-chip"><input type="checkbox" data-day-enabled value="0">Sun</label>
+        <label class="weekday-chip"><input type="checkbox" data-day-enabled value="1">Mon</label>
+        <label class="weekday-chip"><input type="checkbox" data-day-enabled value="2">Tue</label>
+        <label class="weekday-chip"><input type="checkbox" data-day-enabled value="3">Wed</label>
+        <label class="weekday-chip"><input type="checkbox" data-day-enabled value="4">Thu</label>
+        <label class="weekday-chip"><input type="checkbox" data-day-enabled value="5">Fri</label>
+        <label class="weekday-chip"><input type="checkbox" data-day-enabled value="6">Sat</label>
+      </div>
+    </fieldset>
+    <div>
+      <span class="schedule-times-label">Class times</span>
+      <div class="schedule-times" id="subject-day-times">
+        <div class="schedule-time-row" data-day="0" hidden>
+          <strong>Sunday</strong>
+          <label>Starts<input type="time" data-day-start disabled></label>
+          <label>Ends<input type="time" data-day-end disabled></label>
+        </div>
+        <div class="schedule-time-row" data-day="1" hidden>
+          <strong>Monday</strong>
+          <label>Starts<input type="time" data-day-start disabled></label>
+          <label>Ends<input type="time" data-day-end disabled></label>
+        </div>
+        <div class="schedule-time-row" data-day="2" hidden>
+          <strong>Tuesday</strong>
+          <label>Starts<input type="time" data-day-start disabled></label>
+          <label>Ends<input type="time" data-day-end disabled></label>
+        </div>
+        <div class="schedule-time-row" data-day="3" hidden>
+          <strong>Wednesday</strong>
+          <label>Starts<input type="time" data-day-start disabled></label>
+          <label>Ends<input type="time" data-day-end disabled></label>
+        </div>
+        <div class="schedule-time-row" data-day="4" hidden>
+          <strong>Thursday</strong>
+          <label>Starts<input type="time" data-day-start disabled></label>
+          <label>Ends<input type="time" data-day-end disabled></label>
+        </div>
+        <div class="schedule-time-row" data-day="5" hidden>
+          <strong>Friday</strong>
+          <label>Starts<input type="time" data-day-start disabled></label>
+          <label>Ends<input type="time" data-day-end disabled></label>
+        </div>
+        <div class="schedule-time-row" data-day="6" hidden>
+          <strong>Saturday</strong>
+          <label>Starts<input type="time" data-day-start disabled></label>
+          <label>Ends<input type="time" data-day-end disabled></label>
+        </div>
+      </div>
+    </div>
+    <p class="hint">Select a class day above to set its times. Late after a 15-minute grace period.</p>
+    <p class="hint schedule-locked-hint" id="schedule-locked-hint" hidden>Class days and times are locked while class is in session. You can still update the subject and teacher names.</p>
+    <div class="dialog-error" id="subject-form-error" role="alert"></div>
+    <div class="dialog-actions subject-footer-actions">
+      <button class="btn print" type="button" id="subject-cancel">Cancel</button>
+      <button class="btn add" type="submit">Save Subject</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="student-dialog" id="remove-subject-dialog" aria-labelledby="remove-subject-title">
+  <form id="remove-subject-form">
+    <h2 id="remove-subject-title">Remove subject?</h2>
+    <p class="hint" id="remove-subject-message"></p>
+    <div class="dialog-actions">
+      <button class="btn print" type="button" id="remove-subject-no">No</button>
+      <button class="btn danger" type="submit" id="remove-subject-yes">Yes, remove</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="student-dialog" id="reset-list-dialog" aria-labelledby="reset-list-title">
+  <form id="reset-list-form">
+    <h2 id="reset-list-title">Clear student list?</h2>
+    <p class="hint" id="reset-list-message"></p>
+    <div class="dialog-actions">
+      <button class="btn print" type="button" id="reset-list-cancel">Cancel</button>
+      <button class="btn danger" type="submit">Yes, clear list</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="student-dialog" id="import-dialog" aria-labelledby="import-dialog-title">
+  <form id="import-form">
+    <h2 id="import-dialog-title">Import Roster</h2>
+    <p class="hint" id="import-file-name"></p>
+    <ul class="import-summary" id="import-summary"></ul>
+    <p class="hint" id="import-preview"></p>
+    <p class="hint">CSV columns: <b>Student ID</b> (or Student Number) and <b>Name</b>. A header row is optional. Students already on the roster are kept as they are.</p>
+    <div class="dialog-error" id="import-error" role="alert"></div>
+    <div class="dialog-actions">
+      <button class="btn print" type="button" id="import-cancel">Cancel</button>
+      <button class="btn add" type="submit" id="import-submit">Import</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="student-dialog" id="remarks-dialog" aria-labelledby="remarks-dialog-title">
+  <form id="remarks-form">
+    <h2 id="remarks-dialog-title">Excuse Remark</h2>
+    <p class="hint">Add a short reason for marking this attendance as excused.</p>
+    <label for="attendance-remarks">Remarks
+      <textarea id="attendance-remarks" name="remarks" required maxlength="240"></textarea>
+    </label>
+    <div class="dialog-error" id="remarks-form-error" role="alert"></div>
+    <div class="dialog-actions">
+      <button class="btn print" type="button" id="remarks-cancel">Cancel</button>
+      <button class="btn add" type="submit">Save Remark</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="student-dialog" id="remove-student-dialog" aria-labelledby="remove-student-title">
+  <form id="remove-student-form">
+    <h2 id="remove-student-title">Remove student?</h2>
+    <p class="hint" id="remove-student-message"></p>
+    <div class="dialog-error" id="remove-student-error" role="alert"></div>
+    <div class="dialog-actions">
+      <button class="btn print" type="button" id="remove-student-cancel">Cancel</button>
+      <button class="btn danger" type="submit">Remove Student</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="rail" id="rail">
+  <button class="rail-logo-btn" type="button" aria-label="Menu" aria-haspopup="true">
+    <img src="assets/logo.png" alt="Chronolog logo">
+  </button>
+  <nav class="nav rail-menu" id="nav-rail" aria-label="Main"></nav>
+</div>
+
+<script src="vendor/jsQR.js"></script>
+<script>
+  const ICONS = {
+    home:       '<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>',
+    attendance: '<svg viewBox="0 0 24 24"><path d="M4 9V5h4M16 5h4v4M20 15v4h-4M8 19H4v-4"/><rect x="7" y="9" width="10" height="6" rx="1.5"/></svg>',
+    user:       '<svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="4"/><path d="M3 20c0-4 3-6 7-6"/><circle cx="17.5" cy="17.5" r="3.5"/><path d="M16 17.6l1.1 1.1 2-2.2"/></svg>',
+    logs:       '<svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
+    info:       '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.8" r=".6"/></svg>'
+  };
+  const TABS = [
+    { icon: 'home',       label: 'Home',       target: 'home' },
+    { icon: 'attendance', label: 'Scanner',    target: 'scanner' },
+    { icon: 'user',       label: 'Attendance', target: 'attendance' },
+    { icon: 'logs',       label: 'Logs',       target: 'logs' },
+    { icon: 'info',       label: 'About',      target: 'about' }
+  ];
+
+  function buildNav(el, current) {
+    const btns = [];
+    TABS.forEach(t => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.title = t.label;
+      b.setAttribute('aria-label', t.label);
+      b.innerHTML = ICONS[t.icon];
+      if (t.target === current) b.classList.add('current');
+      b.addEventListener('click', () => show(t.target));
+      el.appendChild(b);
+      btns.push(b);
+    });
+    return btns;
+  }
+
+  const rail = document.getElementById('rail');
+  const homeScroll = document.getElementById('home-scroll');
+
+  function show(name) {
+    const to = document.getElementById('view-' + name);
+    const from = document.querySelector('.view.active');
+    if (!to) return;
+
+    if (from === to) {
+      if (name === 'home') homeScroll.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (name !== 'scanner') stopScanner(false);
+    if (name === 'logs') renderAttendanceLogs();
+
+    if (from) from.classList.remove('active');
+    to.classList.add('active');
+    if (name === 'home') {
+      homeScroll.scrollTop = 0;
+      placeTagline();
+    }
+    updateRail();
+    rail.classList.remove('open');
+    railBtns.forEach((b, i) => b.classList.toggle('current', TABS[i].target === name));
+    history.replaceState(null, '', '#' + name);
+  }
+
+  function updateRail() {
+    const onHero = document.getElementById('view-home').classList.contains('active') && homeScroll.scrollTop < innerHeight * 0.7;
+    rail.classList.toggle('hidden', onHero);
+  }
+  homeScroll.addEventListener('scroll', updateRail, { passive: true });
+  window.addEventListener('resize', updateRail);
+  updateRail();
+
+  function placeTagline() {
+    const nolo = document.getElementById('nolo');
+    const tag = document.querySelector('.brand p');
+    if (!nolo || !nolo.offsetWidth) return;
+    const size = parseFloat(getComputedStyle(nolo).fontSize);
+    tag.style.left = (nolo.offsetLeft + nolo.offsetWidth) + 'px';
+    tag.style.top = (document.getElementById('base').offsetTop + size * 0.03) + 'px';
+  }
+  window.addEventListener('resize', placeTagline);
+  window.addEventListener('load', placeTagline);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeTagline);
+
+  document.getElementById('scroll-cue').addEventListener('click', () => {
+    document.getElementById('home-info').scrollIntoView({ behavior: 'smooth' });
+  });
+
+  rail.querySelector('.rail-logo-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    rail.classList.toggle('open');
+  });
+  document.addEventListener('click', () => rail.classList.remove('open'));
+
+  document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = ICONS[el.dataset.icon]; });
+  document.querySelectorAll('.tab-go').forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
+  buildNav(document.getElementById('nav-home'), 'home');
+  const railBtns = buildNav(document.getElementById('nav-rail'), 'home');
+
+  const rows = document.getElementById('rows');
+  const logsDateInput = document.getElementById('logs-date');
+  const logsSubjectSelect = document.getElementById('logs-subject');
+  const logsSummary = document.getElementById('logs-summary');
+  const logsRows = document.getElementById('logs-rows');
+  const studentDialog = document.getElementById('student-dialog');
+  const studentForm = document.getElementById('student-form');
+  const studentDialogTitle = document.getElementById('student-dialog-title');
+  const studentSubmitButton = document.getElementById('student-submit');
+  const studentNumberInput = document.getElementById('student-number');
+  const studentNameInput = document.getElementById('student-name');
+  const studentFormError = document.getElementById('student-form-error');
+  const removeStudentDialog = document.getElementById('remove-student-dialog');
+  const removeStudentForm = document.getElementById('remove-student-form');
+  const removeStudentMessage = document.getElementById('remove-student-message');
+  const removeStudentError = document.getElementById('remove-student-error');
+  const removeStudentCancel = document.getElementById('remove-student-cancel');
+  const subjectDialog = document.getElementById('subject-dialog');
+  const subjectForm = document.getElementById('subject-form');
+  const subjectFormError = document.getElementById('subject-form-error');
+  const removeSubjectDialog = document.getElementById('remove-subject-dialog');
+  const removeSubjectForm = document.getElementById('remove-subject-form');
+  const removeSubjectMessage = document.getElementById('remove-subject-message');
+  const subjectIdInput = document.getElementById('subject-id');
+  const subjectNameInput = document.getElementById('subject-name');
+  const subjectTeacherNameInput = document.getElementById('subject-teacher-name');
+  const subjectDaysFieldset = document.getElementById('subject-days');
+  const subjectDayRows = Array.from(document.querySelectorAll('#subject-day-times .schedule-time-row'));
+  const subjectDayCheckboxes = Array.from(subjectDaysFieldset.querySelectorAll('[data-day-enabled]'));
+  let subjectScheduleLocked = false;
+  subjectDayCheckboxes.forEach(checkbox => {
+    const row = subjectDayRows.find(item => Number(item.dataset.day) === Number(checkbox.value));
+    checkbox.addEventListener('change', () => {
+      const start = row.querySelector('[data-day-start]');
+      const end = row.querySelector('[data-day-end]');
+      row.hidden = !checkbox.checked;
+      start.disabled = !checkbox.checked;
+      end.disabled = !checkbox.checked;
+      start.required = checkbox.checked;
+      end.required = checkbox.checked;
+      if (!checkbox.checked) {
+        start.value = '';
+        end.value = '';
+      }
+    });
+  });
+  const remarksDialog = document.getElementById('remarks-dialog');
+  const remarksForm = document.getElementById('remarks-form');
+  const attendanceRemarksInput = document.getElementById('attendance-remarks');
+  const remarksFormError = document.getElementById('remarks-form-error');
+  let pendingExcusal = null;
+  const subjectList = document.getElementById('subject-list');
+  const subjectSchedule = document.getElementById('subject-schedule');
+  const classStartButton = document.getElementById('class-start');
+  const classResetButton = document.getElementById('class-reset');
+  const classEndButton = document.getElementById('class-end');
+  const scanStartButton = document.getElementById('scan-start');
+  const scanStopButton = document.getElementById('scan-stop');
+  const scanSource = document.getElementById('scan-source');
+  const scanCamera = document.getElementById('scan-camera');
+  const scanCameraWrap = document.getElementById('scan-camera-wrap');
+  const cameraPanel = document.getElementById('camera-panel');
+  const usbPanel = document.getElementById('usb-panel');
+  const usbScanForm = document.getElementById('usb-scan-form');
+  const usbScanInput = document.getElementById('usb-scan-input');
+  const scanResult = document.getElementById('scan-result');
+  const scanIdle = document.getElementById('scan-idle');
+  const scanList = document.getElementById('scan-list');
+  const scanEmpty = document.getElementById('scan-empty');
+  const scannerViewport = document.getElementById('scanner-viewport');
+  const scannerVideo = document.createElement('video');
+  const scannerCanvas = document.createElement('canvas');
+  const scannerContext = scannerCanvas.getContext('2d', { willReadFrequently: true });
+  scannerVideo.autoplay = true;
+  scannerVideo.muted = true;
+  scannerVideo.playsInline = true;
+  scannerVideo.setAttribute('aria-label', 'Live QR scanner camera');
+  scannerViewport.appendChild(scannerVideo);
+
+  const MIN_STAY_MINUTES = 30;
+  const TIME_OUT_GUARD_MS = 60 * 1000;
+  const rosterStorageKey = 'chronolog.students.v1';
+  const subjectStorageKey = 'chronolog.subjects.v1';
+  let students = [];
+  let subjects = [];
+  let archivedSubjects = [];
+  let activeSubjectId = '';
+  let editingStudentId = '';
+  let pendingStudentRemoval = '';
+  let pendingImport = null;
+  let pendingSubjectRemovalId = '';
+  let scannerDetector = null;
+  let scannerStream = null;
+  let scannerTimer = null;
+  let scannerActive = false;
+  let scannerStarting = false;
+  let scannerRequest = 0;
+  let lastScannedValue = '';
+  let lastScannedAt = 0;
+
+  function localDayKey(date = new Date()) {
+    return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0')].join('-');
+  }
+
+  function showScanResult(message, state = '') {
+    const details = {
+      idle: { title: 'Ready', icon: '…' },
+      ok: { title: 'Saved', icon: '✓' },
+      present: { title: 'Present', icon: '✓' },
+      late: { title: 'Late', icon: '◷' },
+      absent: { title: 'Absent', icon: '−' },
+      unknown: { title: 'Unknown student', icon: '?' },
+      repeat: { title: 'Already scanned', icon: '↻' },
+      out: { title: 'Time out', icon: '⇥' },
+      closed: { title: 'Class ended', icon: '■' },
+      warn: { title: 'Check scanner', icon: '!' },
+      bad: { title: 'Scanner issue', icon: '×' }
+    };
+    const selected = state || 'idle';
+    const detail = details[selected] || details.idle;
+    const icon = document.createElement('span');
+    const copy = document.createElement('span');
+    const title = document.createElement('span');
+    const description = document.createElement('span');
+    icon.className = 'scan-result-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = detail.icon;
+    copy.className = 'scan-result-copy';
+    title.className = 'scan-result-title';
+    title.textContent = detail.title;
+    description.className = 'scan-result-message';
+    description.textContent = message;
+    copy.append(title, description);
+    scanResult.className = 'scan-result state-' + selected;
+    scanResult.replaceChildren(icon, copy);
+  }
+
+  function loadRoster() {
+    try {
+      const saved = localStorage.getItem(rosterStorageKey);
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) throw new Error('Saved roster is not a list.');
+      return parsed.filter(student => student && typeof student.id === 'string')
+        .map(student => {
+          const attendance = {};
+          if (student.attendance && typeof student.attendance === 'object' && !Array.isArray(student.attendance)) {
+            Object.keys(student.attendance).forEach(key => {
+              const record = student.attendance[key];
+              if (record && typeof record.date === 'string' &&
+                  ['present', 'late', 'absent', 'excused'].includes(record.status)) {
+                attendance[key] = {
+                  date: record.date,
+                  status: record.status,
+                  timeIn: typeof record.timeIn === 'string' ? record.timeIn : '',
+                  timeOut: typeof record.timeOut === 'string' ? record.timeOut : '',
+                  inAt: typeof record.inAt === 'string' ? record.inAt : '',
+                  manual: record.manual === true,
+                  note: typeof record.note === 'string' ? record.note : '',
+                  remarks: record.status === 'excused' && typeof record.remarks === 'string'
+                    ? record.remarks : ''
+                };
+              }
+            });
+          }
+          if (typeof student.presentOn === 'string' && student.presentOn &&
+              !attendance['default:' + student.presentOn]) {
+            attendance['default:' + student.presentOn] = {
+              date: student.presentOn,
+              status: student.attendanceStatus === 'late' ? 'late' : 'present',
+              timeIn: typeof student.timeIn === 'string' ? student.timeIn : '',
+              remarks: ''
+            };
+          }
+          return {
+            id: student.id,
+            name: typeof student.name === 'string' ? student.name : '',
+            attendance: attendance
+          };
+        });
+    } catch (error) {
+      console.error('Could not load the saved student roster.', error);
+      showScanResult('Could not load the saved student roster. Check browser storage.', 'bad');
+      return [];
+    }
+  }
+
+  function saveRoster() {
+    try {
+      localStorage.setItem(rosterStorageKey, JSON.stringify(students));
+      return true;
+    } catch (error) {
+      console.error('Could not save the student roster.', error);
+      return false;
+    }
+  }
+
+  function openStudentDialog(student = null) {
+    editingStudentId = student ? student.id : '';
+    studentForm.reset();
+    studentFormError.textContent = '';
+    studentDialogTitle.textContent = student ? 'Edit Student' : 'Add Student';
+    studentSubmitButton.textContent = student ? 'Save Changes' : 'Add Student';
+    if (student) {
+      studentNumberInput.value = student.id;
+      studentNameInput.value = student.name;
+    }
+    studentDialog.showModal();
+    studentNumberInput.focus();
+  }
+
+  function isValidTime(value) {
+    if (typeof value !== 'string' || !/^\d{2}:\d{2}$/.test(value)) return false;
+    const [hour, minute] = value.split(':').map(Number);
+    return hour < 24 && minute < 60;
+  }
+
+  function normalizeSubjectSchedule(subject) {
+    const entries = Array.isArray(subject.schedule)
+      ? subject.schedule
+      : isValidTime(subject.startTime) && isValidTime(subject.endTime) && subject.endTime > subject.startTime
+        ? Array.from({ length: 7 }, (_, day) => ({
+          day: day,
+          startTime: subject.startTime,
+          endTime: subject.endTime
+        }))
+        : [];
+    const byDay = new Map();
+    entries.forEach(entry => {
+      if (entry && Number.isInteger(entry.day) && entry.day >= 0 && entry.day <= 6 &&
+          isValidTime(entry.startTime) && isValidTime(entry.endTime) &&
+          entry.endTime > entry.startTime) {
+        byDay.set(entry.day, {
+          day: entry.day,
+          startTime: entry.startTime,
+          endTime: entry.endTime
+        });
+      }
+    });
+    return Array.from(byDay.values()).sort((a, b) => a.day - b.day);
+  }
+
+  function loadSubjects() {
+    try {
+      const saved = localStorage.getItem(subjectStorageKey);
+      if (!saved) return { items: [], archived: [], activeId: '' };
+      const parsed = JSON.parse(saved);
+      if (!parsed || !Array.isArray(parsed.items)) throw new Error('Saved subjects are not a list.');
+      const normalizeSubject = subject => ({
+          id: subject.id,
+          name: subject.name,
+          teacherName: typeof subject.teacherName === 'string' ? subject.teacherName : '',
+          schedule: normalizeSubjectSchedule(subject),
+          startedOn: typeof subject.startedOn === 'string' ? subject.startedOn : '',
+          startedAt: typeof subject.startedAt === 'string' ? subject.startedAt : '',
+          endedOn: typeof subject.endedOn === 'string' ? subject.endedOn : ''
+        });
+      const items = parsed.items.filter(subject =>
+        subject && typeof subject.id === 'string' && typeof subject.name === 'string')
+        .map(normalizeSubject)
+        .filter(subject => subject.schedule.length > 0);
+      const archived = (Array.isArray(parsed.archived) ? parsed.archived : [])
+        .filter(subject =>
+          subject && typeof subject.id === 'string' && typeof subject.name === 'string' &&
+          !items.some(item => item.id === subject.id))
+        .map(normalizeSubject);
+      const activeId = items.some(subject => subject.id === parsed.activeId)
+        ? parsed.activeId : (items[0] ? items[0].id : '');
+      return { items, archived, activeId };
+    } catch (error) {
+      console.error('Could not load the saved subject schedule.', error);
+      showScanResult('Could not load the saved subject schedule. Check browser storage.', 'bad');
+      return { items: [], archived: [], activeId: '' };
+    }
+  }
+
+  function saveSubjects() {
+    try {
+      localStorage.setItem(subjectStorageKey, JSON.stringify({
+        items: subjects,
+        archived: archivedSubjects,
+        activeId: activeSubjectId
+      }));
+      return true;
+    } catch (error) {
+      console.error('Could not save the subject schedule.', error);
+      return false;
+    }
+  }
+
+  function currentSubject() {
+    return subjects.find(subject => subject.id === activeSubjectId) || null;
+  }
+
+  function attendanceKey(subjectId = activeSubjectId, date = localDayKey()) {
+    return (subjectId || 'default') + ':' + date;
+  }
+
+  function getAttendanceRecord(student, subjectId = activeSubjectId, date = localDayKey()) {
+    const record = student.attendance && student.attendance[attendanceKey(subjectId, date)];
+    return record && record.date === date ? record : null;
+  }
+
+  function getSubjectTimes(subject, date = new Date()) {
+    if (!subject) return null;
+    const dailySchedule = subject.schedule.find(entry => entry.day === date.getDay());
+    if (!dailySchedule) return null;
+    const startParts = dailySchedule.startTime.split(':').map(Number);
+    const endParts = dailySchedule.endTime.split(':').map(Number);
+    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), startParts[0], startParts[1]);
+    const end = new Date(date.getFullYear(), date.getMonth(), date.getDate(), endParts[0], endParts[1]);
+    return { start, end };
+  }
+
+  function getClassPhase(subject, now = new Date()) {
+    if (!subject) return 'none';
+    const today = localDayKey(now);
+    const times = getSubjectTimes(subject, now);
+    if (!times) return 'none';
+    if (subject.endedOn === today || now >= times.end) return 'ended';
+    if (subject.startedOn === today || now >= times.start) return 'active';
+    return 'upcoming';
+  }
+
+  function formatTime(time) {
+    const parts = time instanceof Date
+      ? [time.getHours(), time.getMinutes()]
+      : time.split(':').map(Number);
+    return new Date(2000, 0, 1, parts[0], parts[1])
+      .toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function formatDuration(totalSeconds) {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return [hours, minutes, seconds].map(value => String(value).padStart(2, '0')).join(':');
+  }
+
+  function renderSubjects() {
+    subjectList.replaceChildren();
+    if (!subjects.length) {
+      const empty = document.createElement('div');
+      empty.className = 'subject-empty';
+      empty.textContent = 'Add a subject and choose its class days and times.';
+      subjectList.appendChild(empty);
+      subjectSchedule.textContent = 'No subject schedule yet.';
+      activeSubjectId = '';
+      return;
+    }
+
+    subjects.forEach(subject => {
+      const row = document.createElement('div');
+      row.className = 'subject-card-row';
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'subject-card' + (subject.id === activeSubjectId ? ' active' : '');
+      const name = document.createElement('strong');
+      const teacher = document.createElement('small');
+      const dayChips = document.createElement('span');
+      name.textContent = subject.name;
+      teacher.className = 'subject-teacher';
+      teacher.textContent = subject.teacherName || 'Teacher not set';
+      dayChips.className = 'subject-day-chips';
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      subject.schedule.forEach(entry => {
+        const chip = document.createElement('span');
+        chip.className = 'subject-day-chip';
+        chip.textContent = dayNames[entry.day];
+        dayChips.appendChild(chip);
+      });
+      card.append(name, teacher, dayChips);
+      card.addEventListener('click', () => selectSubject(subject.id));
+      row.appendChild(card);
+
+      if (subject.id === activeSubjectId) {
+        const badge = document.createElement('span');
+        badge.className = 'badge-live';
+        badge.textContent = 'ACTIVE';
+        row.appendChild(badge);
+      }
+
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'subject-edit';
+      edit.textContent = 'Edit';
+      edit.setAttribute('aria-label', 'Edit ' + subject.name);
+      edit.addEventListener('click', () => openSubjectDialog(subject));
+      row.appendChild(edit);
+
+      subjectList.appendChild(row);
+    });
+
+    const selected = currentSubject();
+    subjectSchedule.replaceChildren();
+    if (!selected) {
+      subjectSchedule.textContent = 'No subject schedule yet.';
+      return;
+    }
+    const details = document.createElement('details');
+    details.className = 'schedule-details';
+    const summary = document.createElement('summary');
+    summary.textContent = 'Class times · ' + selected.schedule.length + ' days';
+    const scheduleList = document.createElement('div');
+    scheduleList.className = 'schedule-summary-list';
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    selected.schedule.forEach(entry => {
+      const item = document.createElement('div');
+      const day = document.createElement('span');
+      const time = document.createElement('span');
+      item.className = 'schedule-summary-row';
+      day.textContent = dayNames[entry.day];
+      time.textContent = formatTime(entry.startTime) + '–' + formatTime(entry.endTime);
+      item.append(day, time);
+      scheduleList.appendChild(item);
+    });
+    details.append(summary, scheduleList);
+    subjectSchedule.appendChild(details);
+  }
+
+  function selectSubject(id) {
+    if (!subjects.some(subject => subject.id === id)) return;
+    activeSubjectId = id;
+    saveSubjects();
+    renderSubjects();
+    updateAttendance();
+    updateClassSession();
+  }
+
+  function removeSubject() {
+    const subject = subjects.find(item => item.id === pendingSubjectRemovalId);
+    if (!subject) {
+      subjectFormError.textContent = 'This subject is no longer active. Close the dialog and try again.';
+      return;
+    }
+
+    subjects = subjects.filter(item => item !== subject);
+    archivedSubjects = archivedSubjects.filter(item => item.id !== subject.id);
+    archivedSubjects.push(subject);
+    if (activeSubjectId === subject.id) activeSubjectId = subjects[0] ? subjects[0].id : '';
+    pendingSubjectRemovalId = '';
+    const saved = saveSubjects();
+    removeSubjectDialog.close();
+    subjectDialog.close();
+    renderSubjects();
+    updateAttendance();
+    updateClassSession();
+    if (document.getElementById('view-logs').classList.contains('active')) renderAttendanceLogs();
+    showScanResult(saved
+      ? subject.name + ' removed from active subjects. Its attendance history was kept.'
+      : subject.name + ' removed for this page only; browser storage could not save the change.',
+    saved ? 'ok' : 'warn');
+  }
+
+  function markClassEnded(subject, manual = false, refreshSession = true) {
+    if (!subject) return;
+    const today = localDayKey();
+    if (subject.endedOn === today) return;
+    const key = attendanceKey(subject.id, today);
+    let absentCount = 0;
+    students.forEach(student => {
+      if (!getAttendanceRecord(student, subject.id, today)) {
+        student.attendance = student.attendance || {};
+        student.attendance[key] = { date: today, status: 'absent', timeIn: '', remarks: '' };
+        absentCount++;
+        logScan(student.id, 'Not scanned before class ended', 'absent');
+      }
+    });
+    subject.endedOn = today;
+    const rosterSaved = saveRoster();
+    const scheduleSaved = saveSubjects();
+    updateAttendance();
+    if (refreshSession) updateClassSession();
+    const message = absentCount
+      ? absentCount + ' unscanned student' + (absentCount === 1 ? '' : 's') + ' marked absent.'
+      : 'Class ended. All students have an attendance record.';
+    showScanResult(rosterSaved && scheduleSaved
+      ? message
+      : message + ' Some changes could not be saved in browser storage.',
+    absentCount ? 'absent' : (rosterSaved && scheduleSaved ? 'ok' : 'warn'));
+    if (manual) {
+      document.getElementById('class-schedule-hint').textContent = 'Ended by teacher';
+    }
+  }
+
+  function finalizeOverdueClasses(now) {
+    const today = localDayKey(now);
+    subjects.forEach(subject => {
+      const times = getSubjectTimes(subject, now);
+      if (times && subject.endedOn !== today && now >= times.end) {
+        markClassEnded(subject, false, false);
+      }
+    });
+  }
+
+  function setSessionStatus(phase, labelText, timeText) {
+    const root = document.getElementById('class-session');
+    root.className = 'session' + (phase === 'active' ? '' : ' is-' + phase);
+    document.getElementById('class-session-label').textContent = labelText;
+    document.getElementById('class-session-time').textContent = timeText;
+  }
+
+  function getNextSubjectOccurrence(subject, after) {
+    for (let offset = 0; offset <= 7; offset++) {
+      const day = new Date(after.getFullYear(), after.getMonth(), after.getDate() + offset);
+      const times = getSubjectTimes(subject, day);
+      if (times && times.start >= after) return times.start;
+    }
+    return null;
+  }
+
+  function updateScannerSchedule(now) {
+    const current = subjects
+      .filter(subject => getClassPhase(subject, now) === 'active')
+      .sort((a, b) => getSubjectTimes(a, now).start - getSubjectTimes(b, now).start)[0] || null;
+    const root = document.getElementById('scanner-session');
+    const label = document.getElementById('scanner-session-label');
+    const timer = document.getElementById('scanner-session-time');
+    const nextLabel = document.getElementById('scanner-session-next');
+    let after = now;
+
+    if (current) {
+      const times = getSubjectTimes(current, now);
+      const start = current.startedOn === localDayKey(now) && current.startedAt
+        ? new Date(current.startedAt) : times.start;
+      root.className = 'session';
+      label.textContent = 'NOW · ' + current.name;
+      timer.textContent = formatDuration(Math.floor(Math.max(0, now - start) / 1000));
+      after = times.end;
+    } else {
+      root.className = 'session is-upcoming';
+      label.textContent = 'NO CLASS IN SESSION';
+      timer.textContent = '--:--:--';
+    }
+
+    const next = subjects
+      .map(subject => ({ subject, start: getNextSubjectOccurrence(subject, after) }))
+      .filter(item => item.start)
+      .sort((a, b) => a.start - b.start)[0];
+    if (!next) {
+      nextLabel.textContent = 'Next: No subject scheduled';
+      return;
+    }
+    const dayLabel = localDayKey(next.start) === localDayKey(now)
+      ? 'Today'
+      : next.start.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+    nextLabel.textContent = 'Next: ' + next.subject.name + ' · ' + dayLabel + ' ' + formatTime(next.start);
+  }
+
+  function updateClassSession(now = new Date()) {
+    finalizeOverdueClasses(now);
+    updateScannerSchedule(now);
+    const subject = currentSubject();
+    const hint = document.getElementById('class-schedule-hint');
+    if (!subject) {
+      setSessionStatus('upcoming', 'NO SUBJECT', '--:--:--');
+      hint.textContent = 'Add a subject and choose its class days and times';
+      classStartButton.disabled = true;
+      classResetButton.disabled = true;
+      classEndButton.disabled = true;
+      return;
+    }
+
+    const phase = getClassPhase(subject, now);
+    if (phase === 'none') {
+      setSessionStatus('upcoming', 'NO CLASS TODAY', '--:--:--');
+      hint.textContent = 'No class scheduled today';
+      classStartButton.disabled = true;
+      classResetButton.disabled = true;
+      classEndButton.disabled = true;
+      classStartButton.textContent = 'No Class Today';
+      return;
+    }
+    const labelText = phase === 'active' ? 'IN SESSION'
+      : phase === 'upcoming' ? 'UPCOMING' : 'CLASS ENDED';
+    const times = getSubjectTimes(subject, now);
+    let timerText;
+    if (phase === 'active') {
+      const start = subject.startedOn === localDayKey(now) && subject.startedAt
+        ? new Date(subject.startedAt) : times.start;
+      timerText = formatDuration(Math.floor(Math.max(0, now - start) / 1000));
+    } else {
+      timerText = phase === 'ended' ? 'ENDED' : '--:--:--';
+    }
+    setSessionStatus(phase, labelText, timerText);
+    classStartButton.disabled = phase !== 'upcoming';
+    classResetButton.disabled = phase !== 'active';
+    classEndButton.disabled = phase !== 'active';
+    classStartButton.textContent = phase === 'upcoming' ? 'Start Class'
+      : phase === 'active' ? 'Class In Session' : 'Class Ended';
+    hint.textContent = phase === 'upcoming'
+      ? 'Starts ' + formatTime(times.start) + ' · 15-minute grace'
+      : phase === 'active'
+        ? 'Ends ' + formatTime(times.end) + ' · absent marked at end'
+        : 'Ended for today';
+  }
+
+  function startClass() {
+    const subject = currentSubject();
+    if (!subject) {
+      showScanResult('Add and select a subject before starting class.', 'warn');
+      return;
+    }
+    if (getClassPhase(subject) === 'none') {
+      showScanResult('There is no ' + subject.name + ' class scheduled today.', 'warn');
+      return;
+    }
+    const today = localDayKey();
+    if (getClassPhase(subject) === 'ended') {
+      markClassEnded(subject);
+      return;
+    }
+    subject.startedOn = today;
+    subject.startedAt = new Date().toISOString();
+    if (!saveSubjects()) {
+      showScanResult('Class started, but the schedule could not be saved.', 'warn');
+    }
+    updateClassSession();
+  }
+
+  function endClass() {
+    const subject = currentSubject();
+    if (!subject || getClassPhase(subject) !== 'active') {
+      showScanResult('There is no active class to end.', 'warn');
+      return;
+    }
+    markClassEnded(subject, true);
+  }
+
+  function resetClassSession() {
+    const subject = currentSubject();
+    if (!subject || getClassPhase(subject) !== 'active') {
+      showScanResult('There is no active class session to reset.', 'warn');
+      return;
+    }
+    subject.startedOn = localDayKey();
+    subject.startedAt = new Date().toISOString();
+    const saved = saveSubjects();
+    updateClassSession();
+    showScanResult(saved
+      ? subject.name + ' session timer reset. Attendance records were kept.'
+      : subject.name + ' timer reset for this page only; browser storage could not save it.',
+    saved ? 'ok' : 'warn');
+  }
+
+  function openSubjectDialog(subject = null) {
+    subjectScheduleLocked = subject && getClassPhase(subject) === 'active';
+    subjectForm.reset();
+    subjectFormError.textContent = '';
+    pendingSubjectRemovalId = '';
+    subjectIdInput.value = subject ? subject.id : '';
+    document.getElementById('subject-edit-actions').hidden = !subject;
+    document.getElementById('subject-dialog-title').textContent = subject ? 'Edit Subject' : 'Add Subject';
+    subjectForm.querySelector('[type="submit"]').textContent = subject ? 'Save Changes' : 'Save Subject';
+    subjectDayCheckboxes.forEach(checkbox => {
+      checkbox.checked = false;
+      checkbox.disabled = Boolean(subjectScheduleLocked);
+    });
+    subjectDayRows.forEach(row => {
+      const start = row.querySelector('[data-day-start]');
+      const end = row.querySelector('[data-day-end]');
+      row.hidden = true;
+      start.value = '';
+      end.value = '';
+      start.disabled = true;
+      end.disabled = true;
+      start.required = false;
+      end.required = false;
+    });
+    if (subject) {
+      subjectNameInput.value = subject.name;
+      subjectTeacherNameInput.value = subject.teacherName;
+      subject.schedule.forEach(entry => {
+        const row = subjectDayRows.find(item => Number(item.dataset.day) === entry.day);
+        const checkbox = subjectDayCheckboxes.find(item => Number(item.value) === entry.day);
+        if (!row || !checkbox) return;
+        const start = row.querySelector('[data-day-start]');
+        const end = row.querySelector('[data-day-end]');
+        checkbox.checked = true;
+        row.hidden = false;
+        start.value = entry.startTime;
+        end.value = entry.endTime;
+        start.disabled = Boolean(subjectScheduleLocked);
+        end.disabled = Boolean(subjectScheduleLocked);
+        start.required = true;
+        end.required = true;
+      });
+    }
+    document.getElementById('schedule-locked-hint').hidden = !subjectScheduleLocked;
+    subjectDialog.showModal();
+    subjectNameInput.focus();
+  }
+
+  function updateAttendance() {
+    const records = students.map(student => getAttendanceRecord(student));
+    const present = records.filter(record => record && record.status === 'present').length;
+    const late = records.filter(record => record && record.status === 'late').length;
+    const absent = records.filter(record => record && record.status === 'absent').length;
+    updateScanCounts();
+    document.getElementById('stat-present').textContent = present;
+    document.getElementById('stat-late').textContent = late;
+    document.getElementById('stat-absent').textContent = absent;
+    const excused = records.filter(record => record && record.status === 'excused').length;
+    document.getElementById('stat-excused').textContent = excused;
+    document.getElementById('stat-total').textContent = students.length;
+    document.getElementById('attendance-reset').disabled = !students.length;
+
+    rows.replaceChildren();
+    if (!students.length) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 8;
+      td.textContent = 'No students yet. Add a student number or import a CSV to begin.';
+      td.className = 'empty-row';
+      tr.appendChild(td);
+      rows.appendChild(tr);
+      return;
+    }
+
+    students.forEach((student, index) => {
+      const record = getAttendanceRecord(student);
+      const status = record ? record.status : 'pending';
+      const tr = document.createElement('tr');
+      [String(index + 1), student.id, student.name || '—'].forEach(value => {
+        const td = document.createElement('td');
+        td.textContent = value;
+        tr.appendChild(td);
+      });
+
+      const statusCell = document.createElement('td');
+      const statusSelect = document.createElement('select');
+      statusSelect.className = 'status-select status-' + status;
+      statusSelect.setAttribute('aria-label', 'Attendance status for ' + (student.name || student.id));
+      [
+        ['pending', 'Not yet scanned'],
+        ['present', 'Present'],
+        ['late', 'Late'],
+        ['absent', 'Absent'],
+        ['excused', 'Excused']
+      ].forEach(([value, label]) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        statusSelect.appendChild(option);
+      });
+      statusSelect.value = status;
+      statusSelect.addEventListener('change', () => {
+        const nextStatus = statusSelect.value;
+        const remarks = record ? record.remarks : '';
+        if (nextStatus === 'excused' && !remarks.trim()) {
+          pendingExcusal = {
+            student, statusSelect, previousStatus: status,
+            timeIn: record ? record.timeIn : '',
+            timeOut: record ? record.timeOut || '' : '',
+            inAt: record ? record.inAt || '' : ''
+          };
+          attendanceRemarksInput.value = '';
+          remarksFormError.textContent = '';
+          remarksDialog.showModal();
+          attendanceRemarksInput.focus();
+          return;
+        }
+
+        const today = localDayKey();
+        const key = attendanceKey(activeSubjectId, today);
+        if (nextStatus === 'pending') {
+          if (student.attendance) delete student.attendance[key];
+        } else {
+          student.attendance = student.attendance || {};
+          const keepTimes = nextStatus !== 'absent';
+          const timeIn = !keepTimes
+            ? ''
+            : record && record.timeIn
+              ? record.timeIn
+              : (nextStatus === 'present' || nextStatus === 'late')
+                ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                : '';
+          student.attendance[key] = {
+            date: today,
+            status: nextStatus,
+            timeIn: timeIn,
+            timeOut: keepTimes && record ? record.timeOut || '' : '',
+            inAt: keepTimes && record ? record.inAt || '' : '',
+            manual: true,
+            note: '',
+            remarks: nextStatus === 'excused' ? remarks : ''
+          };
+        }
+        const saved = saveRoster();
+        updateAttendance();
+        showScanResult(saved
+          ? 'Attendance status updated for ' + (student.name || student.id) + '.'
+          : 'Attendance status updated for this page only; browser storage could not save it.',
+        saved ? 'ok' : 'warn');
+      });
+      statusCell.appendChild(statusSelect);
+      tr.appendChild(statusCell);
+
+      const timeCell = document.createElement('td');
+      appendStamp(timeCell, record, record && record.timeIn);
+      tr.appendChild(timeCell);
+
+      const timeOutCell = document.createElement('td');
+      appendStamp(timeOutCell, record, record && record.timeOut);
+      tr.appendChild(timeOutCell);
+
+      const remarksCell = document.createElement('td');
+      const remarksInput = document.createElement('input');
+      remarksInput.type = 'text';
+      remarksInput.maxLength = 240;
+      remarksInput.className = 'remark-input';
+      remarksInput.setAttribute('aria-label', 'Remarks for ' + (student.name || student.id));
+      const autoNote = record && record.note && status === 'absent' ? record.note : '';
+      remarksInput.placeholder = record && status === 'excused'
+        ? 'Add an excuse reason' : (autoNote || 'Excused only');
+      remarksInput.title = autoNote ? autoNote + ' (minimum stay is ' + MIN_STAY_MINUTES + ' min)' : '';
+      remarksInput.classList.toggle('has-note', Boolean(autoNote));
+      remarksInput.value = record ? record.remarks : '';
+      remarksInput.disabled = !record || status !== 'excused';
+      remarksInput.addEventListener('change', () => {
+        const currentRecord = getAttendanceRecord(student);
+        if (!currentRecord || currentRecord.status !== 'excused') return;
+        currentRecord.remarks = remarksInput.value.trim();
+        const saved = saveRoster();
+        showScanResult(saved
+          ? 'Remarks saved for ' + (student.name || student.id) + '.'
+          : 'Remarks changed for this page only; browser storage could not save them.',
+        saved ? 'ok' : 'warn');
+      });
+      remarksCell.appendChild(remarksInput);
+      tr.appendChild(remarksCell);
+
+      const actionsCell = document.createElement('td');
+      const actions = document.createElement('div');
+      actions.className = 'row-actions';
+      const editButton = document.createElement('button');
+      editButton.type = 'button';
+      editButton.className = 'row-edit';
+      editButton.textContent = 'Edit';
+      editButton.setAttribute('aria-label', 'Edit ' + (student.name || student.id));
+      editButton.addEventListener('click', () => openStudentDialog(student));
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className = 'row-remove';
+      removeButton.textContent = 'Remove';
+      removeButton.setAttribute('aria-label', 'Remove ' + (student.name || student.id));
+      removeButton.addEventListener('click', () => {
+        pendingStudentRemoval = student.id;
+        removeStudentMessage.textContent = 'Remove ' + (student.name || student.id) +
+          ' from the roster? Their saved attendance history will also be deleted.';
+        removeStudentError.textContent = '';
+        removeStudentDialog.showModal();
+      });
+      actions.append(editButton, removeButton);
+      actionsCell.appendChild(actions);
+      tr.appendChild(actionsCell);
+      rows.appendChild(tr);
+    });
+  }
+
+  function parseCsv(text) {
+    const source = String(text || '').replace(/^\uFEFF/, '');
+    const head = source.split(/\r?\n/, 1)[0] || '';
+    const best = [',', ';', '\t']
+      .map(char => ({ char, count: head.split(char).length - 1 }))
+      .sort((a, b) => b.count - a.count)[0];
+    const sep = best.count > 0 ? best.char : ',';
+    const out = [];
+    let row = [];
+    let cell = '';
+    let quoted = false;
+    for (let i = 0; i < source.length; i++) {
+      const ch = source[i];
+      if (quoted) {
+        if (ch === '"') {
+          if (source[i + 1] === '"') { cell += '"'; i++; } else quoted = false;
+        } else cell += ch;
+      } else if (ch === '"' && cell === '') {
+        quoted = true;
+      } else if (ch === sep) {
+        row.push(cell); cell = '';
+      } else if (ch === '\n' || ch === '\r') {
+        if (ch === '\r' && source[i + 1] === '\n') i++;
+        row.push(cell); cell = '';
+        out.push(row); row = [];
+      } else cell += ch;
+    }
+    row.push(cell);
+    out.push(row);
+    return out
+      .map(r => r.map(c => c.trim().replace(/^'(?=[=+\-@])/, '')))
+      .filter(r => r.some(c => c !== ''));
+  }
+
+  function planRosterImport(rows) {
+    if (!rows.length) return { error: 'That file is empty.' };
+    const norm = value => String(value).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const idHeaders = ['studentid', 'studentnumber', 'studentno', 'studentidnumber', 'idnumber', 'idno', 'id', 'number'];
+    const nameHeaders = ['name', 'studentname', 'fullname', 'learnername'];
+    const firstHeaders = ['firstname', 'givenname', 'first'];
+    const middleHeaders = ['middlename', 'middleinitial', 'mi'];
+    const lastHeaders = ['lastname', 'surname', 'familyname', 'last'];
+    const header = rows[0].map(norm);
+    const idColumn = header.findIndex(h => idHeaders.includes(h));
+    let start = 0;
+    let idIndex = 0;
+    let nameIndexes = [1];
+    if (idColumn >= 0) {
+      start = 1;
+      idIndex = idColumn;
+      const nameColumn = header.findIndex(h => nameHeaders.includes(h));
+      nameIndexes = nameColumn >= 0 ? [nameColumn] : [
+        header.findIndex(h => firstHeaders.includes(h)),
+        header.findIndex(h => middleHeaders.includes(h)),
+        header.findIndex(h => lastHeaders.includes(h))
+      ].filter(index => index >= 0);
+    } else if (header.some(h => nameHeaders.includes(h) || lastHeaders.includes(h))) {
+      return { error: 'Could not find a Student ID column. Add a header such as "Student ID".' };
+    }
+
+    const existingById = new Map(students.map(student => [student.id, student]));
+    const seen = new Set();
+    const plan = { toAdd: [], nameUpdates: [], alreadyOnRoster: 0, duplicateRows: 0, blankRows: 0 };
+    rows.slice(start).forEach(r => {
+      const id = String(r[idIndex] || '').trim().slice(0, 80);
+      if (!id) { plan.blankRows++; return; }
+      if (seen.has(id)) { plan.duplicateRows++; return; }
+      seen.add(id);
+      const name = nameIndexes.map(index => String(r[index] || '').trim()).filter(Boolean)
+        .join(' ').slice(0, 120);
+      const existing = existingById.get(id);
+      if (existing) {
+        plan.alreadyOnRoster++;
+        if (name && !existing.name) plan.nameUpdates.push({ student: existing, name });
+        return;
+      }
+      plan.toAdd.push({ id, name });
+    });
+    return plan;
+  }
+
+  function openImportDialog(fileName, plan) {
+    const summary = document.getElementById('import-summary');
+    const preview = document.getElementById('import-preview');
+    const submit = document.getElementById('import-submit');
+    const error = document.getElementById('import-error');
+    document.getElementById('import-file-name').textContent = 'File: ' + fileName;
+    summary.replaceChildren();
+    preview.textContent = '';
+    error.textContent = '';
+    const plural = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');
+    if (plan.error) {
+      error.textContent = plan.error;
+      submit.disabled = true;
+      submit.textContent = 'Import';
+    } else {
+      const lines = [plural(plan.toAdd.length, 'new student') + ' will be added'];
+      if (plan.alreadyOnRoster) lines.push(plural(plan.alreadyOnRoster, 'student') + ' already on the roster (kept)');
+      if (plan.nameUpdates.length) lines.push(plural(plan.nameUpdates.length, 'missing name') + ' will be filled in');
+      if (plan.duplicateRows) lines.push(plural(plan.duplicateRows, 'repeated ID row') + ' ignored');
+      if (plan.blankRows) lines.push(plural(plan.blankRows, 'row') + ' without an ID ignored');
+      lines.forEach(text => {
+        const item = document.createElement('li');
+        item.textContent = text;
+        summary.appendChild(item);
+      });
+      if (plan.toAdd.length) {
+        preview.textContent = 'Preview: ' + plan.toAdd.slice(0, 3)
+          .map(item => item.id + (item.name ? ' — ' + item.name : '')).join('; ') +
+          (plan.toAdd.length > 3 ? '; …' : '');
+      }
+      const nothing = !plan.toAdd.length && !plan.nameUpdates.length;
+      submit.disabled = nothing;
+      submit.textContent = nothing ? 'Nothing to import'
+        : 'Import ' + plural(plan.toAdd.length + plan.nameUpdates.length, 'student');
+      if (nothing) error.textContent = 'Every student in this file is already on the roster.';
+    }
+    pendingImport = plan.error ? null : plan;
+    document.getElementById('import-dialog').showModal();
+  }
+
+  async function handleImportFile(file) {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      openImportDialog(file.name, { error: 'That file is too large for a student roster (2 MB limit).' });
+      return;
+    }
+    try {
+      const text = await file.text();
+      openImportDialog(file.name, planRosterImport(parseCsv(text)));
+    } catch (error) {
+      console.error('Could not read the roster file.', error);
+      openImportDialog(file.name, { error: 'Could not read that file. Make sure it is a .csv file.' });
+    }
+  }
+
+  function csvCell(value) {
+    let text = String(value == null ? '' : value);
+    if (/^[\t\r ]*[=+\-@]/.test(text)) text = "'" + text;
+    return '"' + text.replace(/"/g, '""') + '"';
+  }
+
+  function formatTimeIn(record) {
+    return formatStamp(record, record && record.timeIn);
+  }
+
+  function appendStamp(cell, record, time) {
+    if (!record || !time) { cell.textContent = '—'; return; }
+    const full = formatStamp(record, time);
+    const clock = document.createElement('span');
+    clock.className = 'stamp-time';
+    clock.textContent = time;
+    cell.replaceChildren(clock);
+    const day = full.endsWith(time) ? full.slice(0, full.length - time.length).trim() : '';
+    if (day) {
+      const date = document.createElement('span');
+      date.className = 'stamp-date';
+      date.textContent = day;
+      cell.appendChild(date);
+    }
+  }
+
+  function formatTimeOut(record) {
+    return formatStamp(record, record && record.timeOut);
+  }
+
+  function formatStamp(record, time) {
+    if (!record || !time) return '';
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(record.date);
+    if (!match) return time;
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const date = new Date(year, month - 1, day);
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+      return time;
+    }
+    return date.toLocaleDateString('en-US', {
+      month: '2-digit', day: '2-digit', year: 'numeric'
+    }) + ' ' + time;
+  }
+
+  function collectAttendanceSessions() {
+    const sessions = new Map();
+    const validStatuses = ['present', 'late', 'absent', 'excused'];
+    students.forEach(student => {
+      Object.entries(student.attendance || {}).forEach(([key, record]) => {
+        const separator = key.lastIndexOf(':');
+        if (!record || separator < 0 || !validStatuses.includes(record.status)) return;
+        const subjectId = key.slice(0, separator) || 'default';
+        const date = record.date;
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date || '');
+        if (!match || key.slice(separator + 1) !== date) return;
+        const parsedDate = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+        if (localDayKey(parsedDate) !== date) return;
+        const id = JSON.stringify([subjectId, date]);
+        if (!sessions.has(id)) sessions.set(id, { subjectId: subjectId, date: date });
+      });
+    });
+    return Array.from(sessions.values())
+      .sort((a, b) => b.date.localeCompare(a.date) ||
+        attendanceSubjectName(a.subjectId).localeCompare(attendanceSubjectName(b.subjectId)));
+  }
+
+  function attendanceSubjectName(subjectId) {
+    if (subjectId === 'default') return 'No subject';
+    const subject = subjects.concat(archivedSubjects).find(item => item.id === subjectId);
+    return subject ? subject.name : 'Unavailable subject';
+  }
+
+  function renderAttendanceLogs() {
+    const sessions = collectAttendanceSessions();
+    const selectedSubject = logsSubjectSelect.value;
+    const availableSubjects = Array.from(new Set(sessions.map(session => session.subjectId)))
+      .sort((a, b) => attendanceSubjectName(a).localeCompare(attendanceSubjectName(b)));
+    logsSubjectSelect.replaceChildren();
+    const allOption = document.createElement('option');
+    allOption.value = '';
+    allOption.textContent = 'All subjects';
+    logsSubjectSelect.appendChild(allOption);
+    availableSubjects.forEach(subjectId => {
+      const option = document.createElement('option');
+      option.value = subjectId;
+      option.textContent = attendanceSubjectName(subjectId);
+      logsSubjectSelect.appendChild(option);
+    });
+    logsSubjectSelect.value = availableSubjects.includes(selectedSubject) ? selectedSubject : '';
+
+    if (!logsDateInput.value && sessions.length) logsDateInput.value = sessions[0].date;
+    const date = logsDateInput.value;
+    const selectedSessions = sessions
+      .filter(session => session.date === date &&
+        (!logsSubjectSelect.value || session.subjectId === logsSubjectSelect.value))
+      .sort((a, b) => attendanceSubjectName(a.subjectId).localeCompare(attendanceSubjectName(b.subjectId)));
+    logsRows.replaceChildren();
+
+    if (!selectedSessions.length) {
+      const row = document.createElement('tr');
+      const cell = document.createElement('td');
+      cell.colSpan = 7;
+      cell.className = 'empty-row';
+      cell.textContent = date
+        ? 'No attendance was recorded for this date and subject.'
+        : 'No attendance logs yet.';
+      row.appendChild(cell);
+      logsRows.appendChild(row);
+      logsSummary.textContent = sessions.length
+        ? 'Choose a date and subject with saved attendance.'
+        : 'Attendance history will appear here after attendance has been recorded.';
+      return;
+    }
+
+    let absentCount = 0;
+    const absentNames = [];
+    selectedSessions.forEach(session => {
+      students.forEach(student => {
+        const record = getAttendanceRecord(student, session.subjectId, session.date);
+        const status = record ? record.status : 'pending';
+        if (status === 'absent') {
+          absentCount++;
+          absentNames.push(attendanceSubjectName(session.subjectId) + ': ' + (student.name || student.id));
+        }
+        const row = document.createElement('tr');
+        const values = [
+          attendanceSubjectName(session.subjectId),
+          student.id,
+          student.name || '—'
+        ];
+        values.forEach(value => {
+          const cell = document.createElement('td');
+          cell.textContent = value;
+          row.appendChild(cell);
+        });
+        const statusCell = document.createElement('td');
+        const statusLabel = status === 'pending'
+          ? 'Not recorded' : status.charAt(0).toUpperCase() + status.slice(1);
+        statusCell.className = 'logs-status status-' + status;
+        statusCell.textContent = statusLabel;
+        row.appendChild(statusCell);
+        const timeCell = document.createElement('td');
+        appendStamp(timeCell, record, record && record.timeIn);
+        row.appendChild(timeCell);
+        const timeOutCell = document.createElement('td');
+        appendStamp(timeOutCell, record, record && record.timeOut);
+        row.appendChild(timeOutCell);
+        const remarksCell = document.createElement('td');
+        remarksCell.textContent = record ? (record.remarks || record.note || '') : '';
+        row.appendChild(remarksCell);
+        logsRows.appendChild(row);
+      });
+    });
+
+    const summaryDate = new Date(date + 'T00:00:00').toLocaleDateString([], {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+    const absentSummary = absentCount
+      ? 'Absent (' + absentCount + '): ' + absentNames.join(', ')
+      : 'No students marked absent.';
+    logsSummary.textContent = summaryDate + ' · ' + selectedSessions.length +
+      ' subject' + (selectedSessions.length === 1 ? '' : 's') + ' · ' + absentSummary;
+  }
+
+  function exportAttendance() {
+    const subject = currentSubject();
+    const date = localDayKey();
+    const headers = ['Subject', 'Date', 'Student ID', 'Name', 'Status', 'Time In', 'Time Out', 'Remarks'];
+    const rows = students.map(student => {
+      const record = getAttendanceRecord(student, activeSubjectId, date);
+      const status = record ? record.status : 'pending';
+      const statusLabel = status === 'pending'
+        ? 'Not yet scanned' : status.charAt(0).toUpperCase() + status.slice(1);
+      return [
+        subject ? subject.name : 'No subject selected',
+        date,
+        student.id,
+        student.name,
+        statusLabel,
+        formatTimeIn(record),
+        formatTimeOut(record),
+        record ? (record.remarks || record.note || '') : ''
+      ].map(csvCell).join(',');
+    });
+    const csv = '\uFEFF' + [headers.map(csvCell).join(','), ...rows].join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const subjectName = subject ? subject.name : 'attendance';
+    const fileSubject = subjectName.replace(/[<>:"/\\|?*\x00-\x1F]/g, '-').trim() || 'attendance';
+    link.href = url;
+    link.download = 'chronolog-' + fileSubject + '-' + date + '.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function printAttendance() {
+    const subject = currentSubject();
+    const date = new Date().toLocaleDateString([], {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+    document.getElementById('print-heading').textContent =
+      'Chronolog - Attendance | ' + (subject ? subject.name : 'No subject selected') + ' | ' + date;
+    window.print();
+  }
+
+  function updateScanCounts() {
+    const counts = { present: 0, late: 0, absent: 0 };
+    students.forEach(student => {
+      const record = getAttendanceRecord(student);
+      if (record && Object.prototype.hasOwnProperty.call(counts, record.status)) {
+        counts[record.status]++;
+      }
+    });
+    document.getElementById('cnt-present').textContent = counts.present;
+    document.getElementById('cnt-late').textContent = counts.late;
+    document.getElementById('cnt-absent').textContent = counts.absent;
+  }
+
+  function logScan(value, detail, state) {
+    const item = document.createElement('li');
+    const description = document.createElement('span');
+    const badge = document.createElement('span');
+    const time = document.createElement('span');
+    description.textContent = value + ' · ' + detail;
+    badge.className = 'scan-log-badge state-' + state;
+    badge.textContent = state === 'present' ? 'Present'
+      : state === 'late' ? 'Late'
+        : state === 'absent' ? 'Absent'
+          : state === 'unknown' ? 'Unknown'
+            : state === 'repeat' ? 'Repeat'
+              : state === 'out' ? 'Time out' : 'Info';
+    time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    item.append(description, badge, time);
+    scanList.prepend(item);
+    while (scanList.children.length > 50) scanList.lastElementChild.remove();
+    scanEmpty.hidden = scanList.children.length > 0;
+  }
+
+  async function refreshCameraChoices() {
+    try {
+      const currentDeviceId = scanCamera.value;
+      const devices = (await navigator.mediaDevices.enumerateDevices())
+        .filter(device => device.kind === 'videoinput');
+      scanCamera.replaceChildren();
+      const automatic = document.createElement('option');
+      automatic.value = '';
+      automatic.textContent = 'Default (rear camera when available)';
+      scanCamera.appendChild(automatic);
+      devices.forEach((device, index) => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.textContent = device.label || 'Camera ' + (index + 1);
+        scanCamera.appendChild(option);
+      });
+      scanCamera.value = devices.some(device => device.deviceId === currentDeviceId)
+        ? currentDeviceId : '';
+      scanCamera.disabled = devices.length < 2;
+      return '';
+    } catch (error) {
+      console.error('Could not list available cameras.', error);
+      return error.message || 'Camera list is unavailable.';
+    }
+  }
+
+  function recordInTime(record) {
+    if (record.inAt) {
+      const stamp = new Date(record.inAt);
+      if (!isNaN(stamp)) return stamp;
+    }
+    const clock = /^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([ap])?/i.exec(record.timeIn || '');
+    const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(record.date || '');
+    if (!clock || !day) return null;
+    let hour = Number(clock[1]);
+    const meridiem = clock[4] ? clock[4].toLowerCase() : '';
+    if (meridiem === 'p' && hour < 12) hour += 12;
+    if (meridiem === 'a' && hour === 12) hour = 0;
+    return new Date(Number(day[1]), Number(day[2]) - 1, Number(day[3]), hour, Number(clock[2]), Number(clock[3] || 0));
+  }
+
+  function recordTimeOut(student, record, now) {
+    const name = student.name || student.id;
+    if (record.manual || record.timeOut || !record.timeIn ||
+        (record.status !== 'present' && record.status !== 'late')) return null;
+    const inTime = recordInTime(record);
+    if (!inTime) return null;
+    const elapsed = now - inTime;
+    if (elapsed < TIME_OUT_GUARD_MS) {
+      return {
+        changed: false,
+        log: 'Scanned in moments ago',
+        message: name + ' just scanned in. Wait at least a minute before scanning out.'
+      };
+    }
+    const minutes = Math.floor(elapsed / 60000);
+    record.timeOut = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    if (minutes < MIN_STAY_MINUTES) {
+      record.status = 'absent';
+      record.note = 'Left after ' + minutes + ' min';
+      return {
+        changed: true,
+        state: 'absent',
+        log: 'Time out after ' + minutes + ' min · marked absent',
+        message: name + ' left after ' + minutes + ' minute' + (minutes === 1 ? '' : 's') +
+          ', under the ' + MIN_STAY_MINUTES + '-minute minimum, so they are marked absent. ' +
+          'You can change this in Attendance.'
+      };
+    }
+    return {
+      changed: true,
+      state: 'out',
+      log: 'Time out after ' + minutes + ' min',
+      message: 'Time out recorded for ' + name + ' after ' + minutes + ' minutes.'
+    };
+  }
+
+  function handleScannedValue(rawValue) {
+    const value = String(rawValue || '').trim();
+    if (!value) return;
+    const nowMs = Date.now();
+    if (value === lastScannedValue && nowMs - lastScannedAt < 1800) return;
+    lastScannedValue = value;
+    lastScannedAt = nowMs;
+
+    const student = students.find(item => item.id === value);
+    if (!student) {
+      logScan(value.slice(0, 100), 'Not on the student roster', 'unknown');
+      showScanResult('Not on the student roster: ' + value.slice(0, 100), 'unknown');
+      return;
+    }
+
+    const todayKey = localDayKey();
+    const subject = currentSubject();
+    if (subject && getClassPhase(subject) === 'ended') {
+      if (subject.endedOn !== todayKey) markClassEnded(subject);
+      showScanResult('The class has ended; this scan did not change attendance.', 'closed');
+      return;
+    }
+    if (subject && getClassPhase(subject) === 'none') {
+      showScanResult('There is no ' + subject.name + ' class scheduled today.', 'warn');
+      return;
+    }
+
+    const existingRecord = getAttendanceRecord(student, activeSubjectId, todayKey);
+    if (existingRecord) {
+      const outcome = recordTimeOut(student, existingRecord, new Date());
+      if (outcome && outcome.changed) {
+        updateAttendance();
+        logScan(student.id, outcome.log, outcome.state);
+        const savedOut = saveRoster();
+        showScanResult(savedOut
+          ? outcome.message
+          : outcome.message + ' Browser storage could not save it.',
+        outcome.state);
+        return;
+      }
+      logScan(student.id, outcome ? outcome.log : 'Attendance was not changed', 'repeat');
+      showScanResult(outcome
+        ? outcome.message
+        : (student.name || student.id) + ' is already recorded; attendance was not changed.',
+      'repeat');
+      return;
+    }
+
+    const now = new Date();
+    const times = getSubjectTimes(subject, now);
+    const status = times && now >= new Date(times.start.getTime() + 15 * 60 * 1000)
+      ? 'late' : 'present';
+    student.attendance = student.attendance || {};
+    student.attendance[attendanceKey(activeSubjectId, todayKey)] = {
+      date: todayKey,
+      status: status,
+      timeIn: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      timeOut: '',
+      inAt: now.toISOString(),
+      manual: false,
+      note: '',
+      remarks: ''
+    };
+    updateAttendance();
+    logScan(student.id, 'Attendance recorded', status);
+    const saved = saveRoster();
+    showScanResult(saved
+      ? 'Attendance recorded for ' + (student.name || student.id) + '.'
+      : 'Attendance recorded for this page only; browser storage could not save it.',
+    status);
+  }
+
+  function updateScannerButtons() {
+    scanStartButton.disabled = scannerStarting || scannerActive;
+    scanStopButton.disabled = !scannerStarting && !scannerActive;
+  }
+
+  function stopScanner(showStatus = true) {
+    scannerRequest++;
+    scannerStarting = false;
+    scannerActive = false;
+    if (scannerTimer !== null) clearTimeout(scannerTimer);
+    scannerTimer = null;
+    if (scannerStream) scannerStream.getTracks().forEach(track => track.stop());
+    scannerStream = null;
+    scannerVideo.srcObject = null;
+    document.querySelector('.scan-stage').classList.remove('scanning');
+    scanIdle.hidden = false;
+    updateScannerButtons();
+    if (showStatus) showScanResult('Scanner stopped.');
+  }
+
+  async function scanFrame() {
+    if (!scannerActive) return;
+    try {
+      if (scannerDetector) {
+        const codes = await scannerDetector.detect(scannerVideo);
+        if (codes.length) handleScannedValue(codes[0].rawValue);
+      } else if (scannerVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        const scale = Math.min(1, 640 / scannerVideo.videoWidth, 640 / scannerVideo.videoHeight);
+        const width = Math.max(1, Math.round(scannerVideo.videoWidth * scale));
+        const height = Math.max(1, Math.round(scannerVideo.videoHeight * scale));
+        if (scannerCanvas.width !== width || scannerCanvas.height !== height) {
+          scannerCanvas.width = width;
+          scannerCanvas.height = height;
+        }
+        scannerContext.drawImage(scannerVideo, 0, 0, width, height);
+        const image = scannerContext.getImageData(0, 0, width, height);
+        const code = window.jsQR(image.data, width, height, { inversionAttempts: 'dontInvert' });
+        if (code) handleScannedValue(code.data);
+      }
+    } catch (error) {
+      console.error('QR detection failed.', error);
+      stopScanner(false);
+      showScanResult('QR detection stopped. Please restart the scanner.', 'bad');
+      return;
+    }
+    if (scannerActive) scannerTimer = setTimeout(scanFrame, 180);
+  }
+
+  async function startScanner() {
+    if (scannerStarting || scannerActive) return;
+    if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showScanResult('Brave and other browsers block camera access from file pages. Open Chronolog from HTTPS or localhost, or switch to USB scanner mode.', 'bad');
+      return;
+    }
+
+    const request = ++scannerRequest;
+    scannerStarting = true;
+    updateScannerButtons();
+    showScanResult('Requesting camera access…');
+
+    try {
+      scannerDetector = null;
+      if (window.BarcodeDetector) {
+        try {
+          if (typeof window.BarcodeDetector.getSupportedFormats !== 'function' ||
+              (await window.BarcodeDetector.getSupportedFormats()).includes('qr_code')) {
+            scannerDetector = new window.BarcodeDetector({ formats: ['qr_code'] });
+          }
+        } catch (error) {
+          console.warn('Native QR detection is unavailable; using the bundled decoder.', error);
+        }
+      }
+      if (request !== scannerRequest) return;
+      if (!scannerDetector && typeof window.jsQR !== 'function') {
+        throw new Error('The bundled QR decoder could not be loaded.');
+      }
+      const videoConstraints = scanCamera.value
+        ? { deviceId: { exact: scanCamera.value } }
+        : { facingMode: { ideal: 'environment' } };
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: videoConstraints
+      });
+      if (request !== scannerRequest) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+      scannerStream = stream;
+      scannerVideo.srcObject = stream;
+      await scannerVideo.play();
+      if (request !== scannerRequest) return;
+      scannerActive = true;
+      scanIdle.hidden = true;
+      document.querySelector('.scan-stage').classList.add('scanning');
+      const cameraListError = await refreshCameraChoices();
+      if (request !== scannerRequest) return;
+      showScanResult(cameraListError
+        ? 'Camera active, but camera choices could not be loaded: ' + cameraListError
+        : 'Camera active. Hold a student-number QR code in the frame.',
+      cameraListError ? 'warn' : '');
+      updateScannerButtons();
+      scanFrame();
+    } catch (error) {
+      if (request !== scannerRequest) return;
+      console.error('Could not start the QR scanner.', error);
+      if (scannerStream) scannerStream.getTracks().forEach(track => track.stop());
+      scannerStream = null;
+      scannerVideo.srcObject = null;
+      scannerActive = false;
+      scanIdle.hidden = false;
+      const message = error.name === 'NotAllowedError'
+        ? 'Camera permission was denied or blocked. In Brave, allow Camera in the site settings and reload. If this is a file page, use HTTPS or localhost; USB mode needs no camera permission.'
+        : error.name === 'NotFoundError'
+          ? 'No camera was found on this device.'
+          : error.name === 'NotReadableError'
+            ? 'The camera is busy or unavailable. Close other apps using it and try again.'
+            : error.name === 'SecurityError'
+              ? 'The browser blocked camera access. Open Chronolog from HTTPS or localhost, or use USB scanner mode.'
+          : error.message || 'The camera could not be started.';
+      showScanResult(message, 'bad');
+    } finally {
+      if (request === scannerRequest) {
+        scannerStarting = false;
+        updateScannerButtons();
+      }
+    }
+  }
+
+  function switchScanSource() {
+    if (scannerStarting || scannerActive) stopScanner(false);
+    const useCamera = scanSource.value === 'camera';
+    cameraPanel.hidden = !useCamera;
+    scanCameraWrap.hidden = !useCamera;
+    usbPanel.hidden = useCamera;
+    if (useCamera) {
+      scanIdle.textContent = 'Ready. Scan a student QR code.';
+      showScanResult('Waiting for a scan…');
+    } else {
+      showScanResult('USB scanner ready. Scan a student number.');
+      usbScanInput.focus();
+    }
+  }
+
+  const savedSubjects = loadSubjects();
+  subjects = savedSubjects.items;
+  archivedSubjects = savedSubjects.archived;
+  activeSubjectId = savedSubjects.activeId;
+  students = loadRoster();
+  renderSubjects();
+  updateAttendance();
+  document.getElementById('today').textContent =
+    new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  document.getElementById('scan-today').textContent =
+    document.getElementById('today').textContent;
+  updateClassSession();
+  let attendanceDay = localDayKey();
+  setInterval(() => {
+    const today = localDayKey();
+    if (today !== attendanceDay) {
+      attendanceDay = today;
+      updateAttendance();
+    }
+    updateClassSession();
+  }, 1000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) updateClassSession();
+  });
+
+  document.getElementById('student-add').addEventListener('click', () => openStudentDialog());
+  const resetListDialog = document.getElementById('reset-list-dialog');
+  document.getElementById('attendance-reset').addEventListener('click', () => {
+    if (!students.length) return;
+    document.getElementById('reset-list-message').textContent = 'Remove all ' + students.length +
+      ' student' + (students.length === 1 ? '' : 's') + ' from the roster? Their saved attendance history ' +
+      'will also be deleted. This cannot be undone.';
+    resetListDialog.showModal();
+  });
+  document.getElementById('reset-list-cancel').addEventListener('click', () => resetListDialog.close());
+  document.getElementById('reset-list-form').addEventListener('submit', event => {
+    event.preventDefault();
+    students = [];
+    const saved = saveRoster();
+    resetListDialog.close();
+    updateAttendance();
+    showScanResult(saved
+      ? 'Student list cleared.'
+      : 'Student list cleared for this page only; browser storage could not save the change.',
+    saved ? 'ok' : 'warn');
+  });
+  const importFileInput = document.getElementById('student-import-file');
+  const importDialog = document.getElementById('import-dialog');
+  document.getElementById('student-import').addEventListener('click', () => importFileInput.click());
+  importFileInput.addEventListener('change', () => {
+    const file = importFileInput.files && importFileInput.files[0];
+    importFileInput.value = '';
+    handleImportFile(file);
+  });
+  document.getElementById('import-cancel').addEventListener('click', () => {
+    pendingImport = null;
+    importDialog.close();
+  });
+  importDialog.addEventListener('cancel', () => { pendingImport = null; });
+  document.getElementById('import-form').addEventListener('submit', event => {
+    event.preventDefault();
+    if (!pendingImport) return;
+    const plan = pendingImport;
+    pendingImport = null;
+    plan.toAdd.forEach(item => students.push({ id: item.id, name: item.name, attendance: {} }));
+    plan.nameUpdates.forEach(update => { update.student.name = update.name; });
+    const saved = saveRoster();
+    importDialog.close();
+    updateAttendance();
+    showScanResult(saved
+      ? 'Imported ' + plan.toAdd.length + ' student' + (plan.toAdd.length === 1 ? '' : 's') + ' from CSV.'
+      : 'Imported for this page only; browser storage could not save the roster.',
+    saved ? 'ok' : 'warn');
+  });
+  document.getElementById('logs-back').addEventListener('click', event => show('attendance', event.currentTarget));
+  logsDateInput.addEventListener('change', renderAttendanceLogs);
+  logsSubjectSelect.addEventListener('change', renderAttendanceLogs);
+  document.getElementById('attendance-export').addEventListener('click', exportAttendance);
+  document.getElementById('attendance-print').addEventListener('click', printAttendance);
+  document.getElementById('student-cancel').addEventListener('click', () => {
+    editingStudentId = '';
+    studentDialog.close();
+  });
+  studentDialog.addEventListener('cancel', () => { editingStudentId = ''; });
+  studentForm.addEventListener('submit', event => {
+    event.preventDefault();
+    const id = studentNumberInput.value.trim();
+    const name = studentNameInput.value.trim();
+    const editingStudent = editingStudentId
+      ? students.find(student => student.id === editingStudentId)
+      : null;
+    if (!id) {
+      studentFormError.textContent = 'Enter a student number.';
+      studentNumberInput.focus();
+      return;
+    }
+    if (editingStudentId && !editingStudent) {
+      studentFormError.textContent = 'This student is no longer on the roster. Close the dialog and try again.';
+      return;
+    }
+    if (students.some(student => student.id === id && student !== editingStudent)) {
+      studentFormError.textContent = 'That student number is already on the roster.';
+      studentNumberInput.focus();
+      return;
+    }
+    const wasEditing = Boolean(editingStudent);
+    if (editingStudent) {
+      editingStudent.id = id;
+      editingStudent.name = name;
+    } else {
+      students.push({ id, name, attendance: {} });
+    }
+    editingStudentId = '';
+    const saved = saveRoster();
+    studentDialog.close();
+    updateAttendance();
+    showScanResult(saved
+      ? (wasEditing ? 'Updated student ' + id + '.' : 'Added student number ' + id + '.')
+      : (wasEditing
+        ? 'Student updated for this page only; browser storage could not save it.'
+        : 'Student added for this page only; browser storage could not save it.'),
+    saved ? 'ok' : 'warn');
+  });
+  removeStudentCancel.addEventListener('click', () => {
+    pendingStudentRemoval = '';
+    removeStudentError.textContent = '';
+    removeStudentDialog.close();
+  });
+  removeStudentDialog.addEventListener('cancel', () => { pendingStudentRemoval = ''; });
+  removeStudentForm.addEventListener('submit', event => {
+    event.preventDefault();
+    const student = students.find(item => item.id === pendingStudentRemoval);
+    if (!student) {
+      removeStudentError.textContent = 'This student is no longer on the roster. No changes were made.';
+      return;
+    }
+    students = students.filter(item => item !== student);
+    pendingStudentRemoval = '';
+    const saved = saveRoster();
+    removeStudentDialog.close();
+    updateAttendance();
+    showScanResult(saved
+      ? 'Removed ' + (student.name || student.id) + ' and their saved attendance history.'
+      : 'Student removed for this page only; browser storage could not save the change.',
+    saved ? 'ok' : 'warn');
+  });
+  document.getElementById('subject-add').addEventListener('click', () => openSubjectDialog());
+  document.getElementById('subject-cancel').addEventListener('click', () => subjectDialog.close());
+  document.getElementById('subject-remove').addEventListener('click', () => {
+    const subject = subjects.find(item => item.id === subjectIdInput.value);
+    if (!subject) {
+      subjectFormError.textContent = 'This subject is no longer active. Close the dialog and try again.';
+      return;
+    }
+    pendingSubjectRemovalId = subject.id;
+    removeSubjectMessage.textContent = 'Do you want to remove "' + subject.name +
+      '"? Its saved attendance history will remain in Logs.';
+    removeSubjectDialog.showModal();
+    document.getElementById('remove-subject-yes').focus();
+  });
+  document.getElementById('remove-subject-no').addEventListener('click', () => {
+    pendingSubjectRemovalId = '';
+    removeSubjectDialog.close();
+    document.getElementById('subject-remove').focus();
+  });
+  removeSubjectDialog.addEventListener('cancel', () => {
+    pendingSubjectRemovalId = '';
+  });
+  removeSubjectForm.addEventListener('submit', event => {
+    event.preventDefault();
+    removeSubject();
+  });
+  document.getElementById('remarks-cancel').addEventListener('click', () => {
+    if (pendingExcusal) pendingExcusal.statusSelect.value = pendingExcusal.previousStatus;
+    pendingExcusal = null;
+    remarksDialog.close();
+  });
+  remarksDialog.addEventListener('cancel', () => {
+    if (pendingExcusal) pendingExcusal.statusSelect.value = pendingExcusal.previousStatus;
+    pendingExcusal = null;
+  });
+  remarksForm.addEventListener('submit', event => {
+    event.preventDefault();
+    const remarks = attendanceRemarksInput.value.trim();
+    if (!remarks) {
+      remarksFormError.textContent = 'Enter a remark to mark this attendance as excused.';
+      attendanceRemarksInput.focus();
+      return;
+    }
+    if (!pendingExcusal) return;
+
+    const student = pendingExcusal.student;
+    student.attendance = student.attendance || {};
+    student.attendance[attendanceKey()] = {
+      date: localDayKey(),
+      status: 'excused',
+      timeIn: pendingExcusal.timeIn,
+      timeOut: pendingExcusal.timeOut,
+      inAt: pendingExcusal.inAt,
+      manual: true,
+      note: '',
+      remarks: remarks
+    };
+    const saved = saveRoster();
+    pendingExcusal = null;
+    remarksDialog.close();
+    updateAttendance();
+    showScanResult(saved
+      ? 'Attendance marked excused for ' + (student.name || student.id) + '.'
+      : 'Attendance marked excused for this page only; browser storage could not save it.',
+    saved ? 'ok' : 'warn');
+  });
+  subjectForm.addEventListener('submit', event => {
+    event.preventDefault();
+    const id = subjectIdInput.value;
+    const name = subjectNameInput.value.trim();
+    if (!name) {
+      subjectFormError.textContent = 'Enter a subject name.';
+      subjectNameInput.focus();
+      return;
+    }
+    const teacherName = subjectTeacherNameInput.value.trim();
+    if (!teacherName) {
+      subjectFormError.textContent = 'Enter a teacher name.';
+      subjectTeacherNameInput.focus();
+      return;
+    }
+    const existing = subjects.find(subject => subject.id === id);
+    const scheduleLocked = existing && getClassPhase(existing) === 'active';
+    let schedule;
+    if (scheduleLocked) {
+      schedule = existing.schedule;
+    } else {
+      const selectedCheckboxes = subjectDayCheckboxes.filter(checkbox => checkbox.checked);
+      if (!selectedCheckboxes.length) {
+        subjectFormError.textContent = 'Choose at least one class day.';
+        subjectDayCheckboxes[0].focus();
+        return;
+      }
+      const invalidCheckbox = selectedCheckboxes.find(checkbox => {
+        const row = subjectDayRows.find(item => Number(item.dataset.day) === Number(checkbox.value));
+        const start = row.querySelector('[data-day-start]').value;
+        const end = row.querySelector('[data-day-end]').value;
+        return !start || !end || end <= start;
+      });
+      if (invalidCheckbox) {
+        const row = subjectDayRows.find(item => Number(item.dataset.day) === Number(invalidCheckbox.value));
+        subjectFormError.textContent = 'Set a start and end time for each selected day; the end must be later.';
+        row.querySelector('[data-day-end]').focus();
+        return;
+      }
+      schedule = selectedCheckboxes.map(checkbox => {
+        const row = subjectDayRows.find(item => Number(item.dataset.day) === Number(checkbox.value));
+        return {
+          day: Number(checkbox.value),
+          startTime: row.querySelector('[data-day-start]').value,
+          endTime: row.querySelector('[data-day-end]').value
+        };
+      });
+    }
+    const subject = existing || {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+      teacherName: '',
+      schedule: [],
+      startedOn: '',
+      startedAt: '',
+      endedOn: ''
+    };
+    subject.name = name;
+    subject.teacherName = teacherName;
+    subject.schedule = schedule;
+    if (existing) {
+      subjects[subjects.indexOf(existing)] = subject;
+    } else {
+      subjects.push(subject);
+    }
+    activeSubjectId = subject.id;
+    const saved = saveSubjects();
+    subjectDialog.close();
+    renderSubjects();
+    updateAttendance();
+    updateClassSession();
+    showScanResult(saved
+      ? subject.name + ' details saved.'
+      : subject.name + ' saved for this page only; browser storage could not save the subject.',
+    saved ? 'ok' : 'warn');
+  });
+  classStartButton.addEventListener('click', startClass);
+  classResetButton.addEventListener('click', resetClassSession);
+  classEndButton.addEventListener('click', endClass);
+  scanStartButton.addEventListener('click', startScanner);
+  scanStopButton.addEventListener('click', () => stopScanner());
+  scanSource.addEventListener('change', switchScanSource);
+  scanCamera.addEventListener('change', () => {
+    if (scannerActive) {
+      stopScanner(false);
+      startScanner();
+    }
+  });
+  usbScanForm.addEventListener('submit', event => {
+    event.preventDefault();
+    const value = usbScanInput.value.trim();
+    if (!value) {
+      showScanResult('No student number was received from the USB scanner.', 'warn');
+      usbScanInput.focus();
+      return;
+    }
+    handleScannedValue(value);
+    usbScanInput.value = '';
+    usbScanInput.focus();
+  });
+  switchScanSource();
+
+  if (location.hash === '#scanner') show('scanner');
+  if (location.hash === '#attendance') show('attendance');
+  if (location.hash === '#logs') show('logs');
+  if (location.hash === '#about') show('about');
+</script>
+</body>
+</html>
